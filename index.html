@@ -1,0 +1,3732 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Do Terrão ao Profissional</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+
+/* =========================================================
+   DESIGN TOKENS
+   Uma identidade em três tons: terra (bairro) -> grama (base)
+   -> ouro (profissional). A cor evolui com a carreira, do
+   mesmo jeito que o jogador evolui do campo de terra ao topo.
+   ========================================================= */
+:root {
+  --ink: #0d1310;
+  --ink-2: #131f19;
+  --ink-3: #1b2b22;
+  --ink-4: #223529;
+
+  --terrao: #b9662f;
+  --terrao-dim: #7a4a26;
+  --terrao-glow: rgba(185, 102, 47, 0.35);
+
+  --grama: #3fa35a;
+  --grama-dim: #1f5c34;
+  --grama-glow: rgba(63, 163, 90, 0.35);
+
+  --ouro: #e7b23c;
+  --ouro-dim: #8a6a24;
+  --ouro-glow: rgba(231, 178, 60, 0.4);
+
+  --giz: #f4efe6;
+  --giz-dim: #a9a297;
+  --giz-faint: #6f6a62;
+  --linha: rgba(244, 239, 230, 0.14);
+  --linha-strong: rgba(244, 239, 230, 0.26);
+
+  --risco: #d1483f;
+  --risco-glow: rgba(209, 72, 63, 0.35);
+  --info: #4f8fd1;
+  --info-glow: rgba(79, 143, 209, 0.35);
+
+  --font-display: 'Anton', 'Arial Narrow', sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: 'Space Mono', 'Courier New', monospace;
+
+  --radius: 10px;
+  --radius-sm: 7px;
+  --shadow-card: 0 4px 18px rgba(0, 0, 0, 0.35);
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--ink);
+  color: var(--giz);
+  font-family: var(--font-body);
+  min-height: 100%;
+}
+
+body {
+  background:
+    radial-gradient(ellipse 800px 500px at 50% -10%, rgba(63, 163, 90, 0.10), transparent),
+    radial-gradient(ellipse 600px 400px at 90% 100%, rgba(185, 102, 47, 0.08), transparent),
+    var(--ink);
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+#app { min-height: 100vh; min-height: 100dvh; }
+#root { max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; position: relative; }
+
+h1, h2, h3 { font-family: var(--font-display); font-weight: 400; letter-spacing: 0.01em; margin: 0; }
+p { margin: 0 0 8px; line-height: 1.5; color: var(--giz); }
+strong { color: var(--giz); font-weight: 700; }
+em { color: var(--giz-dim); font-style: normal; }
+
+button { font-family: var(--font-body); cursor: pointer; }
+input { font-family: var(--font-body); }
+
+::selection { background: var(--ouro-glow); color: var(--ink); }
+
+:focus-visible { outline: 2px solid var(--ouro); outline-offset: 2px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* =========================== SCREEN / SHELL =========================== */
+
+.screen { animation: screenIn 0.28s ease both; padding-bottom: 28px; }
+.screen-bare { padding: 0; }
+.screen-body { padding: 14px 14px 4px; }
+
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.loading { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; height: 100dvh; gap: 14px; }
+.loading-ball { font-size: 48px; animation: spin 1.1s linear infinite; }
+.loading p { color: var(--giz-dim); font-family: var(--font-mono); font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+/* =========================== SCOREBOARD (HEADER) =========================== */
+
+.scoreboard {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: linear-gradient(180deg, #101a14 0%, #0e1611 100%);
+  border-bottom: 1px solid var(--linha);
+  padding: 12px 14px 10px;
+}
+
+.sb-top { display: flex; align-items: center; gap: 10px; }
+
+.sb-num {
+  font-family: var(--font-display);
+  font-size: 22px;
+  color: var(--ink);
+  background: var(--ouro);
+  width: 40px; height: 40px;
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 2px var(--ink-3);
+}
+
+.sb-id { flex: 1; min-width: 0; }
+.sb-name { font-weight: 700; font-size: 15px; color: var(--giz); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-meta { font-family: var(--font-mono); font-size: 11px; color: var(--giz-dim); letter-spacing: 0.02em; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sb-avatar { font-size: 26px; flex-shrink: 0; }
+
+.sb-stamp {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 2px 8px;
+  border: 1.5px solid var(--ouro-dim);
+  color: var(--ouro);
+  border-radius: 4px;
+  margin-top: 8px;
+  transform: rotate(-2deg);
+}
+
+.sb-meters { display: flex; gap: 10px; margin-top: 9px; }
+.meter { flex: 1; min-width: 0; }
+.meter span { display: block; font-family: var(--font-mono); font-size: 9px; color: var(--giz-faint); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.bar { height: 6px; background: var(--ink-4); border-radius: 4px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 4px; transition: width 0.5s ease; }
+.fill-fadiga { background: linear-gradient(90deg, var(--terrao-dim), var(--terrao)); }
+.fill-moral { background: linear-gradient(90deg, var(--grama-dim), var(--grama)); }
+.fill-rep { background: linear-gradient(90deg, var(--ouro-dim), var(--ouro)); }
+.fill-tec { background: var(--grama); }
+.fill-fis { background: var(--info); }
+.fill-men { background: var(--ouro); }
+
+/* stamps por fase / tipo de evento */
+.stamp-bairro, .sb-stamp.stamp-bairro { color: var(--terrao); border-color: var(--terrao-dim); }
+.stamp-base, .sb-stamp.stamp-base { color: var(--grama); border-color: var(--grama-dim); }
+.stamp-profissional, .sb-stamp.stamp-profissional { color: var(--ouro); border-color: var(--ouro-dim); }
+.stamp-lenda, .sb-stamp.stamp-lenda { color: var(--ouro); border-color: var(--ouro); }
+.stamp-lesao { color: var(--risco); border-color: var(--risco); }
+.stamp-selecao { color: var(--info); border-color: var(--info); }
+.stamp-transferencia { color: var(--info); border-color: var(--info); }
+.stamp-midia { color: var(--giz); border-color: var(--linha-strong); }
+.stamp-raizes { color: var(--terrao); border-color: var(--terrao); }
+.stamp-amor { color: var(--risco); border-color: var(--risco); }
+.stamp-celular, .stamp-dinheiro { color: var(--ouro); border-color: var(--ouro-dim); }
+
+/* =========================== BOTÕES =========================== */
+
+.btn {
+  border: none;
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.01em;
+  color: var(--giz);
+  background: var(--ink-3);
+  min-height: 46px;
+  transition: transform 0.12s ease, opacity 0.12s ease, background 0.15s ease;
+}
+.btn:active { transform: scale(0.97); }
+.btn-block { width: 100%; display: block; }
+.btn-lg { font-size: 16px; padding: 15px 18px; }
+.btn-sm { font-size: 12px; padding: 9px 12px; min-height: 38px; }
+
+.btn-primary { background: var(--grama); color: #06180d; }
+.btn-gold { background: linear-gradient(180deg, #f2c563, var(--ouro)); color: #241a04; }
+.btn-outline { background: transparent; border: 1.5px solid var(--linha-strong); color: var(--giz-dim); }
+.btn-ghost { background: transparent; color: var(--giz-dim); }
+.btn-rest { background: var(--ink-4); color: var(--giz); border: 1px dashed var(--linha-strong); margin-top: 8px; }
+.btn-chip { background: var(--ink-4); color: var(--giz); width: 44px; padding: 0; font-size: 20px; min-height: 44px; }
+
+/* =========================== MENU =========================== */
+
+.menu-screen { min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 32px 24px; text-align: center; gap: 26px; }
+.menu-hero { display: flex; flex-direction: column; align-items: center; gap: 14px; }
+.menu-ball { font-size: 56px; }
+.menu-screen .title-display { font-size: 40px; line-height: 1.08; color: var(--giz); }
+.menu-tag { font-style: italic; color: var(--giz-dim); font-size: 14px; max-width: 320px; line-height: 1.5; }
+.menu-screen .btn { max-width: 320px; }
+
+/* =========================== CRIAÇÃO =========================== */
+
+.create-screen { padding: 22px 18px 40px; max-width: 480px; margin: 0 auto; }
+.create-progress { display: flex; gap: 6px; margin-bottom: 22px; }
+.prog-dot { height: 4px; flex: 1; background: var(--ink-4); border-radius: 2px; }
+.prog-dot.active { background: var(--ouro); }
+
+.create-title { font-size: 26px; color: var(--giz); margin-bottom: 6px; }
+.create-sub { color: var(--giz-dim); font-size: 13px; margin-bottom: 20px; }
+
+.field-label { display: block; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--giz-dim); margin: 18px 0 8px; }
+.field-label .opt { text-transform: none; letter-spacing: 0; opacity: 0.7; }
+.field-label strong { color: var(--ouro); font-family: var(--font-mono); }
+
+.text-input {
+  width: 100%; background: var(--ink-2); border: 1.5px solid var(--linha); color: var(--giz);
+  border-radius: var(--radius-sm); padding: 12px 14px; font-size: 15px;
+}
+.text-input:focus { border-color: var(--ouro); outline: none; }
+.text-input::placeholder { color: var(--giz-faint); }
+
+.range-input { width: 100%; accent-color: var(--ouro); height: 28px; }
+
+.create-nav { display: flex; gap: 10px; margin-top: 26px; }
+.create-nav .btn { flex: 1; }
+
+.pos-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.pos-card {
+  background: var(--ink-2); border: 1.5px solid var(--linha); border-radius: var(--radius-sm);
+  padding: 12px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; color: var(--giz);
+}
+.pos-card.selected { border-color: var(--grama); background: var(--ink-3); box-shadow: 0 0 0 1px var(--grama) inset; }
+.pos-emoji { font-size: 22px; }
+.pos-name { font-size: 12px; font-weight: 600; text-align: center; }
+.pos-short { font-family: var(--font-mono); font-size: 10px; color: var(--giz-dim); }
+
+.number-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 6px; }
+.number-display { font-family: var(--font-display); font-size: 34px; color: var(--ouro); min-width: 60px; text-align: center; }
+
+.chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.chip-btn { background: var(--ink-2); border: 1.5px solid var(--linha); color: var(--giz); border-radius: 999px; padding: 10px 18px; font-size: 13px; font-weight: 600; }
+.chip-btn.selected { border-color: var(--ouro); color: var(--ouro); background: var(--ink-3); }
+
+.avatar-grid { display: flex; gap: 8px; flex-wrap: wrap; }
+.avatar-btn { background: var(--ink-2); border: 1.5px solid var(--linha); border-radius: 50%; width: 48px; height: 48px; font-size: 22px; display: flex; align-items: center; justify-content: center; padding: 0; }
+.avatar-btn.selected { border-color: var(--ouro); box-shadow: 0 0 0 2px var(--ouro-glow); }
+
+.pick-list { display: flex; flex-direction: column; gap: 8px; }
+.pick-card { text-align: left; background: var(--ink-2); border: 1.5px solid var(--linha); border-left: 4px solid var(--linha-strong); border-radius: var(--radius-sm); padding: 10px 14px; color: var(--giz); }
+.pick-card.selected { border-left-color: var(--grama); background: var(--ink-3); }
+.pick-name { font-weight: 700; font-size: 14px; margin-bottom: 2px; }
+.pick-desc { font-size: 12px; color: var(--giz-dim); line-height: 1.4; }
+
+/* =========================== CARTÕES ESTILO CANHOTO DE INGRESSO =========================== */
+
+.card {
+  position: relative;
+  background: var(--ink-2);
+  border: 1px solid var(--linha);
+  border-radius: var(--radius);
+  padding: 16px 16px 14px;
+  margin: 0 0 14px;
+  box-shadow: var(--shadow-card);
+}
+.card::before {
+  content: '';
+  position: absolute;
+  top: -1px; left: 16px; right: 16px; height: 0;
+  border-top: 2px dashed var(--linha-strong);
+}
+
+.card-title { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--giz-dim); margin-bottom: 12px; }
+
+.stamp {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  padding: 3px 10px;
+  border: 1.5px solid var(--ouro-dim);
+  color: var(--ouro);
+  border-radius: 4px;
+  transform: rotate(-3deg);
+  margin-bottom: 12px;
+}
+
+.save-toast {
+  background: var(--grama-glow); border: 1px solid var(--grama-dim); color: var(--grama);
+  font-family: var(--font-mono); font-size: 12px; text-align: center; padding: 9px 12px;
+  border-radius: var(--radius-sm); margin-bottom: 12px; animation: screenIn 0.25s ease both;
+}
+
+.card-news .news-item { font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--linha); color: var(--giz); line-height: 1.4; }
+.card-news .news-item:last-child { border-bottom: none; }
+.news-item.muted { color: var(--giz-faint); font-style: italic; }
+
+.phase-head { padding: 4px 2px 14px; }
+.phase-head h2 { font-size: 22px; color: var(--giz); }
+.phase-head p { font-family: var(--font-mono); font-size: 12px; color: var(--giz-dim); margin-top: 4px; }
+.squad-badge { display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.04em; padding: 2px 7px; border-radius: 4px; margin-left: 2px; }
+.squad-badge.status-titular { background: var(--grama-glow); color: var(--grama); }
+.squad-badge.status-reserva { background: var(--ouro-glow); color: var(--ouro); }
+.squad-badge.status-fora { background: var(--risco-glow); color: var(--risco); }
+
+.train-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 4px; }
+.train-btn {
+  background: var(--ink-3); border: 1px solid var(--linha); border-radius: var(--radius-sm);
+  padding: 12px 6px; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--giz);
+}
+.train-btn:active { background: var(--ink-4); }
+.train-icon { font-size: 20px; }
+.train-label { font-size: 10px; text-align: center; line-height: 1.2; }
+
+.quick-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.quick-row .btn { flex: 1; min-width: 46%; }
+
+.card-injury { text-align: center; }
+.card-injury .bar { margin: 12px 0 16px; }
+
+/* =========================== PARTIDA =========================== */
+
+.card-moment { text-align: center; }
+.moment-vs { font-family: var(--font-mono); font-size: 12px; color: var(--giz-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+.moment-icon { font-size: 40px; margin: 10px 0; }
+.moment-text { font-size: 16px; color: var(--giz); line-height: 1.5; margin-bottom: 18px; }
+.moment-options { display: flex; flex-direction: column; gap: 8px; }
+.moment-btn { text-align: left; background: var(--ink-3); border: 1.5px solid var(--linha); border-radius: var(--radius-sm); padding: 12px 14px; display: flex; justify-content: space-between; align-items: center; gap: 10px; color: var(--giz); }
+.moment-btn:active { border-color: var(--ouro); }
+.moment-label { font-size: 14px; font-weight: 600; }
+.moment-attr { font-family: var(--font-mono); font-size: 10px; color: var(--giz-dim); text-transform: uppercase; letter-spacing: 0.04em; white-space: nowrap; }
+
+.card-result { text-align: center; }
+.result-tag { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.14em; font-weight: 700; margin-bottom: 6px; }
+.result-win .result-tag { color: var(--grama); }
+.result-draw .result-tag { color: var(--giz-dim); }
+.result-loss .result-tag { color: var(--risco); }
+.result-score { font-family: var(--font-display); font-size: 52px; color: var(--giz); line-height: 1; animation: popIn 0.35s ease both; }
+@keyframes popIn { from { transform: scale(0.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+.result-vs { font-size: 13px; color: var(--giz-dim); margin: 4px 0 14px; }
+.moment-recap { font-size: 13px; padding: 10px 12px; border-radius: var(--radius-sm); margin-bottom: 14px; background: var(--ink-3); border: 1px solid var(--linha); }
+.moment-recap.success { border-color: var(--grama-dim); color: var(--giz); }
+.moment-recap.fail { border-color: var(--linha-strong); color: var(--giz-dim); }
+.result-rating { font-size: 14px; margin-bottom: 4px; }
+.result-rating strong { color: var(--ouro); font-family: var(--font-mono); font-size: 16px; }
+.result-stats { font-size: 12px; color: var(--giz-dim); margin-bottom: 4px; }
+.result-rep { font-family: var(--font-mono); font-size: 12px; color: var(--grama); margin-bottom: 16px; }
+.card-result .btn { margin-top: 14px; }
+
+/* =========================== EVENTOS / RESUMO =========================== */
+
+.card-event, .card-summary { }
+.event-title { font-size: 22px; color: var(--giz); margin-bottom: 10px; line-height: 1.15; }
+.event-body p { font-size: 14px; color: var(--giz); margin-bottom: 8px; }
+.event-gap { height: 6px; }
+.event-choices { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.event-choice {
+  text-align: left; background: var(--ink-3); border: 1.5px solid var(--linha); border-radius: var(--radius-sm);
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 2px; color: var(--giz);
+}
+.event-choice:active { border-color: var(--ouro); }
+.choice-label { font-size: 14px; font-weight: 600; }
+.choice-sub { font-family: var(--font-mono); font-size: 11px; color: var(--giz-dim); }
+
+.card-summary .btn { margin-top: 16px; }
+
+/* =========================== PAINÉIS (ATRIBUTOS / AMIGOS / CARREIRA) =========================== */
+
+.attr-group { margin-bottom: 14px; }
+.attr-group-title { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--giz-faint); margin-bottom: 8px; }
+.attr-row { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+.attr-name { font-size: 12px; width: 90px; flex-shrink: 0; color: var(--giz-dim); }
+.attr-row .bar { flex: 1; }
+.attr-val { font-family: var(--font-mono); font-size: 12px; color: var(--giz); width: 24px; text-align: right; flex-shrink: 0; }
+
+.friend-list { display: flex; flex-direction: column; gap: 8px; }
+.friend-row {
+  display: block; width: 100%; text-align: left; background: var(--ink-3); border: 1px solid var(--linha);
+  border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; color: var(--giz);
+}
+.friend-row:active { border-color: var(--ouro); }
+.friend-row .friend-name { display: inline-block; font-weight: 600; }
+.friend-name em { font-size: 11px; color: var(--giz-dim); font-style: normal; }
+.friend-path { display: block; color: var(--giz-dim); font-size: 12px; margin: 2px 0 6px; }
+.friend-bar { height: 5px; }
+.hint-text { font-size: 12px; color: var(--giz-faint); font-style: italic; margin-top: 10px; text-align: center; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat-box { background: var(--ink-3); border-radius: var(--radius-sm); padding: 12px 6px; text-align: center; }
+.stat-box b { display: block; font-family: var(--font-display); font-size: 20px; color: var(--ouro); }
+.stat-box span { display: block; font-family: var(--font-mono); font-size: 9px; color: var(--giz-dim); text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+
+/* =========================== CARTEIRA DE INVESTIMENTOS =========================== */
+
+.invest-row { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--linha); }
+.invest-row:last-child { border-bottom: none; }
+.invest-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.invest-name { font-size: 13px; font-weight: 600; }
+.invest-detail { font-family: var(--font-mono); font-size: 11px; color: var(--giz-dim); }
+.gain-pos { color: var(--grama); }
+.gain-neg { color: var(--risco); }
+.invest-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; flex-shrink: 0; }
+.invest-value { font-family: var(--font-mono); font-size: 13px; color: var(--giz); }
+.btn-cashout { width: auto; font-size: 11px; padding: 6px 10px; min-height: 30px; }
+
+/* =========================== LEGADO =========================== */
+
+.legacy-screen { padding: 40px 20px 40px; max-width: 480px; margin: 0 auto; text-align: center; }
+.legacy-stamp {
+  display: inline-block; font-family: var(--font-mono); font-weight: 700; font-size: 13px; letter-spacing: 0.16em;
+  color: var(--ink); background: var(--ouro); padding: 5px 14px; border-radius: 4px; transform: rotate(-2deg); margin-bottom: 16px;
+}
+.legacy-screen .title-display { font-size: 34px; color: var(--giz); }
+.legacy-sub { color: var(--giz-dim); font-size: 13px; margin: 6px 0 24px; }
+.legacy-grid { margin-bottom: 20px; }
+.legacy-screen .card { text-align: left; }
+.legacy-trophy { font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--linha); }
+.legacy-trophy:last-child { border-bottom: none; }
+.legacy-trophy span { color: var(--giz-dim); font-family: var(--font-mono); font-size: 11px; }
+.legacy-postcareer { font-size: 13px; color: var(--giz-dim); margin: 18px 0 22px; }
+.legacy-screen .btn { max-width: 320px; margin: 0 auto; }
+
+/* =========================== PÊNALTI =========================== */
+
+.card-penalty { text-align: center; }
+.pk-tag { font-family: var(--font-display); font-size: 26px; color: var(--ouro); letter-spacing: 0.04em; }
+.pk-sub { font-family: var(--font-mono); font-size: 11px; color: var(--giz-dim); text-transform: uppercase; margin-bottom: 10px; }
+.pk-text { font-size: 14px; color: var(--giz); margin-bottom: 4px; }
+.pk-instruction { font-family: var(--font-mono); font-size: 10px; color: var(--giz-faint); letter-spacing: 0.06em; margin-bottom: 14px; }
+
+.goal-frame {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  background-color: var(--ink);
+  background-image:
+    linear-gradient(var(--linha) 1px, transparent 1px),
+    linear-gradient(90deg, var(--linha) 1px, transparent 1px);
+  background-size: 12.5% 16.6%;
+  border: 2px solid var(--linha-strong);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.pk-zone {
+  position: absolute;
+  width: 15%;
+  aspect-ratio: 1 / 1;
+  transform: translate(-50%, -50%);
+  background: rgba(231, 178, 60, 0.12);
+  border: 2.5px solid var(--ouro);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  padding: 0;
+}
+.pk-zone:active { background: var(--ouro-glow); }
+.pk-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ouro); }
+
+.keeper-figure { position: absolute; bottom: 4%; left: 50%; transform: translateX(-50%); width: 22%; }
+.keeper-head { width: 34%; aspect-ratio: 1/1; background: #e8b88a; border-radius: 50%; margin: 0 auto 2px; }
+.keeper-body { width: 60%; aspect-ratio: 1 / 1.3; background: var(--info); border-radius: 6px 6px 3px 3px; margin: 0 auto; }
+.keeper-arm { position: absolute; top: 32%; width: 42%; height: 14%; background: var(--info); border-radius: 6px; }
+.keeper-arm-l { left: -28%; transform: rotate(18deg); }
+.keeper-arm-r { right: -28%; transform: rotate(-18deg); }
+
+.pk-ball { font-size: 26px; margin: 12px 0 4px; }
+.pk-caption { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; color: var(--giz-dim); text-transform: uppercase; }
+
+/* =========================== ENCONTRE SEU AMOR =========================== */
+
+.dating-screen { display: flex; flex-direction: column; align-items: center; gap: 14px; padding-top: 6px; }
+.dating-header { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--giz-dim); }
+
+.swipe-card {
+  width: 100%;
+  background: linear-gradient(180deg, var(--ink-3), var(--ink-2));
+  border: 1.5px solid var(--linha-strong);
+  border-radius: 16px;
+  padding: 32px 20px;
+  text-align: center;
+  box-shadow: var(--shadow-card);
+  touch-action: pan-y;
+  user-select: none;
+}
+.swipe-avatar { font-size: 64px; margin-bottom: 10px; }
+.swipe-name { font-family: var(--font-display); font-size: 24px; color: var(--giz); margin-bottom: 12px; }
+.swipe-qualities { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.quality-chip { font-size: 11px; background: var(--ink-4); border: 1px solid var(--linha); color: var(--giz-dim); padding: 4px 10px; border-radius: 999px; }
+
+.swipe-actions { display: flex; gap: 10px; width: 100%; }
+.swipe-btn { flex: 1; font-size: 14px; }
+.swipe-btn-like { background: var(--grama); color: #06180d; }
+.swipe-btn-nope { background: var(--ink-3); border: 1.5px solid var(--risco); color: var(--risco); }
+
+/* =========================== ESCUDOS =========================== */
+
+.crest-img { object-fit: contain; border-radius: 4px; background: rgba(255,255,255,0.04); flex-shrink: 0; }
+.crest-fallback { display: flex; align-items: center; justify-content: center; background: var(--ink-4); border-radius: 50%; flex-shrink: 0; }
+
+/* =========================== PROPOSTAS (CONTRATO / TRANSFERÊNCIA) =========================== */
+
+.offers-header { padding: 4px 2px 16px; }
+.offers-header h2 { font-size: 22px; color: var(--giz); }
+.offers-header p { font-family: var(--font-mono); font-size: 12px; color: var(--giz-dim); margin-top: 4px; }
+
+.offer-card {
+  background: var(--ink-2); border: 1.5px solid var(--linha-strong); border-radius: var(--radius);
+  padding: 16px; margin-bottom: 14px; box-shadow: var(--shadow-card);
+}
+.offer-card-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.offer-num { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.1em; color: var(--giz-faint); }
+.offer-compat { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--grama); background: var(--grama-glow); padding: 3px 9px; border-radius: 999px; border: 1px solid var(--grama-dim); }
+.offer-club-row { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.offer-club-info { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.offer-league { font-family: var(--font-mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ouro); }
+.offer-club-name { font-family: var(--font-display); font-size: 20px; color: var(--giz); line-height: 1.1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.offer-quote { font-size: 12px; color: var(--giz-dim); background: var(--ink-3); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 14px; line-height: 1.4; }
+.offer-stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.offer-stat { display: flex; flex-direction: column; gap: 2px; }
+.offer-stat span { font-family: var(--font-mono); font-size: 9px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--giz-faint); }
+.offer-stat b { font-size: 14px; color: var(--giz); }
+.offer-line { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-top: 1px solid var(--linha); font-size: 12px; color: var(--giz-dim); }
+.offer-line b { color: var(--giz); font-size: 13px; }
+.offer-line-val { font-size: 13px; color: var(--giz); font-weight: 600; }
+.offer-objectives { margin: 12px 0 16px; }
+.offer-obj-title { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; color: var(--ouro); margin-bottom: 6px; }
+.offer-obj-item { font-size: 12px; color: var(--giz-dim); padding: 3px 0; }
+.offers-stay { margin-top: 4px; }
+
+/* =========================== DASHBOARD (HUB) =========================== */
+
+.next-match-card { text-align: center; }
+.next-match-row { display: flex; align-items: center; justify-content: center; gap: 16px; margin: 10px 0 8px; }
+.next-match-vs { font-family: var(--font-display); font-size: 18px; color: var(--giz-faint); }
+.next-match-names { display: flex; justify-content: space-between; font-size: 12px; color: var(--giz-dim); padding: 0 4px; margin-bottom: 8px; }
+.next-match-meta { font-family: var(--font-mono); font-size: 11px; color: var(--giz-faint); margin-bottom: 14px; }
+.next-match-card .btn { margin-top: 4px; }
+
+.meter-row { display: flex; align-items: center; gap: 10px; margin-bottom: 9px; font-size: 12px; color: var(--giz-dim); }
+.meter-row span { width: 92px; flex-shrink: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.meter-row .bar { flex: 1; }
+.meter-row b { font-family: var(--font-mono); font-size: 12px; color: var(--giz); width: 34px; text-align: right; flex-shrink: 0; }
+
+.shortcuts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin: 4px 0 14px; }
+.shortcut-btn {
+  background: var(--ink-2); border: 1px solid var(--linha); border-radius: var(--radius-sm);
+  padding: 12px 4px; display: flex; flex-direction: column; align-items: center; gap: 5px; color: var(--giz);
+}
+.shortcut-btn:active { background: var(--ink-3); border-color: var(--ouro-dim); }
+.shortcut-icon { font-size: 19px; }
+.shortcut-label { font-size: 9px; text-align: center; line-height: 1.2; color: var(--giz-dim); }
+
+/* =========================== PAINÉIS NOVOS =========================== */
+
+.player-card { text-align: center; }
+.player-card-avatar { font-size: 56px; position: relative; display: inline-block; }
+.player-hair-tag { position: absolute; top: -6px; right: -10px; font-size: 20px; }
+.player-card-name { font-family: var(--font-display); font-size: 24px; color: var(--giz); margin-top: 6px; }
+.player-card-meta { font-family: var(--font-mono); font-size: 12px; color: var(--giz-dim); margin-top: 2px; }
+.player-card .attr-row { text-align: left; }
+
+.cal-next { display: flex; justify-content: space-between; align-items: center; background: var(--ink-3); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; color: var(--giz-dim); margin-bottom: 4px; }
+.cal-next b { color: var(--ouro); }
+.cal-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid var(--linha); font-size: 13px; color: var(--giz); }
+.cal-row:last-child { border-bottom: none; }
+
+.perf-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--linha); font-size: 13px; color: var(--giz-dim); }
+.perf-row:last-child { border-bottom: none; }
+.perf-row b { font-family: var(--font-mono); color: var(--giz); }
+
+.standing-row { display: flex; align-items: center; gap: 10px; padding: 8px 4px; border-bottom: 1px solid var(--linha); font-size: 12px; }
+.standing-row:last-child { border-bottom: none; }
+.standing-row.standing-me { background: var(--grama-glow); border-radius: var(--radius-sm); }
+.standing-pos { font-family: var(--font-mono); color: var(--giz-faint); width: 24px; flex-shrink: 0; }
+.standing-name { flex: 1; color: var(--giz); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.standing-pts { font-family: var(--font-mono); color: var(--ouro); font-weight: 700; flex-shrink: 0; }
+
+.interest-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--linha); }
+.interest-row:last-child { border-bottom: none; }
+.interest-info { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.interest-info span:first-child { font-size: 13px; color: var(--giz); }
+
+.goal-item { font-size: 13px; color: var(--giz-dim); padding: 8px 0; border-bottom: 1px solid var(--linha); }
+.goal-item:last-child { border-bottom: none; }
+.goal-item.goal-met { color: var(--giz); }
+.evo-delta { font-family: var(--font-mono); }
+
+/* =========================== RESPONSIVO =========================== */
+
+@media (min-width: 481px) {
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background: radial-gradient(ellipse 900px 700px at 50% 0%, rgba(63,163,90,0.06), transparent 60%);
+    pointer-events: none;
+  }
+}
+
+@media (max-width: 360px) {
+  .train-grid { grid-template-columns: repeat(2, 1fr); }
+  .result-score { font-size: 42px; }
+}
+</style>
+</head>
+<body>
+<div id="app"><div id="root"><div class="loading"><div class="loading-ball">⚽</div><p>Carregando...</p></div></div></div>
+<script>
+'use strict';
+/* =========================================================================
+   DO TERRÃO AO PROFISSIONAL — motor do jogo (vanilla JS, single file)
+   ---------------------------------------------------------------------
+   Seções:
+    1. CONFIG & DADOS (posições, estilos, personalidades, nomes, clubes...)
+    2. ESTADO / PERSISTÊNCIA (window.storage)
+    3. UTILITÁRIOS
+    4. CRIAÇÃO DE PERSONAGEM
+    5. TREINO / ATRIBUTOS
+    6. MOTOR DE PARTIDA
+    7. FASE: BAIRRO
+    8. FASE: PENEIRA
+    9. FASE: BASE
+    10. CONTRATO PROFISSIONAL
+    11. FASE: PROFISSIONAL (temporada)
+    12. EVENTOS PARALELOS (mídia, entrevista, lesão, transferência, agente,
+        dinheiro, amigos, seleção)
+    13. APOSENTADORIA / LEGADO
+    14. RENDERIZAÇÃO (telas)
+    15. INICIALIZAÇÃO / LIGAÇÃO DE EVENTOS
+   ========================================================================= */
+
+/* =========================== 1. CONFIG & DADOS =========================== */
+
+const CONFIG = {
+  BAIRRO_MATCHES: 5,
+  BASE_SEASONS: 2,
+  TURNS_PER_SEASON: 15,
+  RETIRE_MIN_AGE: 30,
+  FORCE_RETIRE_AGE: 39,
+  LOG_MAX: 50,
+  ROMANCE_MIN_AGE: 18,
+};
+
+const ATTR_KEYS = ['passe','finalizacao','drible','desarme','velocidade','forca','resistencia','visao','concentracao','lideranca'];
+
+const ATTR_LABELS = {
+  passe: 'Passe', finalizacao: 'Finalização', drible: 'Drible', desarme: 'Desarme',
+  velocidade: 'Velocidade', forca: 'Força', resistencia: 'Resistência',
+  visao: 'Visão de Jogo', concentracao: 'Concentração', lideranca: 'Liderança',
+};
+
+const ATTR_GROUP = {
+  passe: 'tec', finalizacao: 'tec', drible: 'tec', desarme: 'tec',
+  velocidade: 'fis', forca: 'fis', resistencia: 'fis',
+  visao: 'men', concentracao: 'men', lideranca: 'men',
+};
+
+const GROUP_LABELS = { tec: 'Técnico', fis: 'Físico', men: 'Mental' };
+
+const POSITIONS = {
+  GO:  { name: 'Goleiro',           short: 'GOL', emoji: '🧤', role: 'goleiro', primary: ['concentracao','forca','visao'], numberSuggest: 1 },
+  ZC:  { name: 'Zagueiro',          short: 'ZAG', emoji: '🛡️', role: 'defesa',  primary: ['desarme','forca','concentracao'], numberSuggest: 4 },
+  LD:  { name: 'Lateral-direito',   short: 'LD',  emoji: '⚡', role: 'defesa',  primary: ['velocidade','resistencia','desarme'], numberSuggest: 2 },
+  LE:  { name: 'Lateral-esquerdo',  short: 'LE',  emoji: '⚡', role: 'defesa',  primary: ['velocidade','resistencia','desarme'], numberSuggest: 6 },
+  VOL: { name: 'Volante',           short: 'VOL', emoji: '🧱', role: 'meio',    primary: ['desarme','passe','resistencia'], numberSuggest: 5 },
+  MEI: { name: 'Meia',              short: 'MEI', emoji: '🎯', role: 'meio',    primary: ['passe','visao','drible'], numberSuggest: 10 },
+  PD:  { name: 'Ponta-direita',     short: 'PD',  emoji: '💨', role: 'ataque',  primary: ['velocidade','drible','finalizacao'], numberSuggest: 7 },
+  PE:  { name: 'Ponta-esquerda',    short: 'PE',  emoji: '💨', role: 'ataque',  primary: ['velocidade','drible','finalizacao'], numberSuggest: 11 },
+  SA:  { name: 'Segundo atacante',  short: 'SA',  emoji: '🎯', role: 'ataque',  primary: ['finalizacao','drible','visao'], numberSuggest: 9 },
+  CA:  { name: 'Centroavante',      short: 'CA',  emoji: '🎯', role: 'ataque',  primary: ['finalizacao','forca','concentracao'], numberSuggest: 9 },
+};
+
+const STYLES = {
+  veloz:        { name: 'Veloz',         desc: 'Explosivo, vive da velocidade e do espaço.', main: 'velocidade', sub: 'drible' },
+  artilheiro:   { name: 'Artilheiro',    desc: 'Faro de gol acima da média.', main: 'finalizacao', sub: 'visao' },
+  criativo:     { name: 'Criativo',      desc: 'Enxerga passes que ninguém mais vê.', main: 'visao', sub: 'passe' },
+  lutador:      { name: 'Lutador',       desc: 'Ganha tudo no físico e na raça.', main: 'forca', sub: 'desarme' },
+  muralha:      { name: 'Muralha',       desc: 'Duro de passar, difícil de furar.', main: 'desarme', sub: 'concentracao' },
+  estrategista: { name: 'Estrategista',  desc: 'Organiza o jogo com inteligência.', main: 'visao', sub: 'concentracao' },
+};
+
+const PERSONALITIES = {
+  competitivo:  { name: 'Competitivo',        desc: 'Cresce nos jogos decisivos e odeia perder.', effects: { matchLearnMult: 0.15, rivalryMult: 0.4 } },
+  humilde:      { name: 'Humilde',            desc: 'Cai bem na mídia e evita polêmicas.', effects: { mediaMult: 0.25, scandalMult: -0.6 } },
+  temperamental:{ name: 'Temperamental',      desc: 'Joga no limite — intenso e imprevisível.', effects: { clutchMult: 0.08, scandalMult: 0.7 } },
+  lider:        { name: 'Líder',              desc: 'Levanta o time com a voz e o exemplo.', effects: { relationMult: 0.35, liderancaGrowMult: 0.35 } },
+  individualista:{ name: 'Individualista',    desc: 'Resolve sozinho antes de combinar.', effects: { statChanceMult: 0.15, relationMult: -0.3 } },
+  trabalhador:  { name: 'Trabalhador',        desc: 'Compensa com suor o que falta de talento.', effects: { trainingMult: 0.3 } },
+  talentoso:    { name: 'Talentoso',          desc: 'Aprende rápido só de estar em campo.', effects: { matchLearnMult: 0.3, startAttrBonus: 4 } },
+  nervoso:      { name: 'Nervoso sob pressão',desc: 'Talento cru que ainda não domina a pressão.', effects: { startAttrBonus: 6, bigMomentMult: -0.15 } },
+};
+
+const AVATARS = ['🧑🏻','🧑🏼','🧑🏽','🧑🏾','🧑🏿','👦🏻','👦🏼','👦🏽','👦🏾','👦🏿'];
+const FEET = ['Destro', 'Canhoto', 'Ambidestro'];
+
+const MALE_NAMES = ['Lucas','Rafael','Bruno','Diego','Thiago','Matheus','Gabriel','André','Felipe','Rodrigo','Marcos','Eduardo','Vitor','Daniel','Caio','Igor','Renato','Fábio','Leandro','Otávio','Wesley','Anderson','Douglas','Everton'];
+const FEMALE_NAMES = ['Juliana','Camila','Fernanda','Patrícia','Renata','Bruna','Aline','Débora','Cristiane','Larissa','Vanessa','Priscila'];
+const SURNAMES = ['Silva','Santos','Oliveira','Souza','Costa','Almeida','Pereira','Lima','Carvalho','Gomes','Ribeiro','Barbosa','Rocha','Dias','Nascimento','Teixeira','Correia','Moreira','Cardoso','Duarte'];
+
+function randomName(gender) {
+  const pool = gender === 'f' ? FEMALE_NAMES : MALE_NAMES;
+  return pick(pool) + ' ' + pick(SURNAMES);
+}
+
+const FRIENDS_INIT = [
+  { id: 'joao',   name: 'João',   pos: 'CA',  roleLabel: 'atacante', path: 'amador', closeness: 65 },
+  { id: 'lucas',  name: 'Lucas',  pos: 'GO',  roleLabel: 'goleiro',  path: 'amador', closeness: 65 },
+  { id: 'rafael', name: 'Rafael', pos: 'VOL', roleLabel: 'volante',  path: 'amador', closeness: 65 },
+  { id: 'pedro',  name: 'Pedro',  pos: 'ZC',  roleLabel: 'zagueiro', path: 'amador', closeness: 65 },
+];
+const FRIEND_PATH_ORDER = ['amador','base','profissional_pequeno','profissional_destaque'];
+const FRIEND_PATH_LABEL = {
+  amador: 'ainda joga várzea',
+  base: 'entrou pra base de um clube',
+  profissional_pequeno: 'virou profissional',
+  profissional_destaque: 'virou destaque nacional',
+  abandonou: 'largou o futebol',
+};
+
+const BR_CLUBS_BY_TIER = {
+  1: ['São Raimundo-RR', 'Rio Branco-AC', 'Galvez-AC', 'Trem-AP', 'Princesa do Solimões-AM', 'Tuna Luso-PA', 'Moto Club-MA', 'ASA-AL', 'Confiança-SE', 'Treze-PB', 'Nacional-AM', 'Penarol-AC', 'Castanhal-PA', 'Murici-AL'],
+  2: ['Paysandu', 'Botafogo-PB', 'Sampaio Corrêa', 'Ferroviária', 'Ituano', 'Tombense', 'Caxias', 'Brusque', 'ABC', 'América-RN', 'Guarani', 'Figueirense', 'Ypiranga-RS', 'Manaus FC', 'Retrô'],
+  3: ['América-MG', 'Atlético del Rey-MG', 'Atlético-GO', 'Avaí', 'Botafogo-SP', 'Ceará', 'CRB', 'Criciúma', 'Cuiabá', 'Goiás', 'Grêmio Novorizontino', 'Fortaleza', 'Juventude', 'Londrina', 'Náutico', 'Operário-PR', 'Ponte Preta', 'São Bernardo', 'Sport', 'Vila Nova'],
+  4: ['Athletico Paranaense', 'Atlético-MG', 'Bahia', 'Botafogo', 'Chapecoense', 'Corinthians', 'Coritiba', 'Cruzeiro', 'Flamengo', 'Fluminense', 'Grêmio', 'Internacional', 'Mirassol', 'Palmeiras', 'Red Bull Bragantino', 'Remo', 'Santos', 'São Paulo', 'Vasco da Gama', 'Vitória'],
+};
+function genClubName(tier) {
+  const t = clamp(tier || 1, 1, 4);
+  return pick(BR_CLUBS_BY_TIER[t] || BR_CLUBS_BY_TIER[1]);
+}
+
+const TRANSFER_CLUBS = {
+  /* América do Sul */
+  'Argentina':        { clubs: ['Boca Juniors', 'River Plate', 'Racing Club', 'Independiente', 'San Lorenzo', 'Central Córdoba', 'Defensa y Justicia', 'Deportivo Riestra', 'Estudiantes', 'Gimnasia Mendoza', 'Instituto', 'Lanús', "Newell's Old Boys", 'Platense', 'Talleres', 'Vélez Sarsfield', 'Unión Santa Fe', 'Aldosivi', 'Argentinos Juniors', 'Atlético Tucumán', 'Banfield', 'Barracas Central', 'Belgrano', 'Gimnasia La Plata', 'Huracán', 'Independiente Rivadavia', 'Rosario Central', 'Sarmiento', 'Tigre'], tier: 4 },
+  'Uruguai':           { clubs: ['Peñarol', 'Nacional', 'Defensor Sporting'], tier: 3 },
+  'Chile':             { clubs: ['Colo-Colo', 'Universidad de Chile', 'Universidad Católica'], tier: 3 },
+  'Colômbia':          { clubs: ['Atlético Nacional', 'Millonarios', 'América de Cali', 'Junior'], tier: 3 },
+  'Peru':              { clubs: ['Universitario', 'Alianza Lima', 'Sporting Cristal'], tier: 2 },
+  'Equador':           { clubs: ['Barcelona SC', 'LDU Quito', 'Emelec'], tier: 2 },
+  'Paraguai':          { clubs: ['Olimpia', 'Cerro Porteño', 'Libertad'], tier: 2 },
+  'Bolívia':           { clubs: ['Bolívar', 'The Strongest'], tier: 1 },
+  'Venezuela':         { clubs: ['Deportivo Táchira', 'Caracas FC'], tier: 1 },
+  /* América do Norte e Central */
+  'México':            { clubs: ['Club América', 'Chivas de Guadalajara', 'Cruz Azul', 'Monterrey', 'Tigres UANL'], tier: 4 },
+  'Estados Unidos':    { clubs: ['Inter Miami', 'LA Galaxy', 'LAFC', 'Atlanta United', 'Seattle Sounders', 'Charlotte FC', 'Chicago Fire', 'FC Cincinnati', 'Columbus Crew', 'D.C. United', 'CF Montréal', 'Nashville SC', 'New England Revolution', 'New York City FC', 'New York Red Bulls', 'Orlando City', 'Philadelphia Union', 'Toronto FC', 'Austin FC', 'Colorado Rapids', 'FC Dallas', 'Houston Dynamo', 'Minnesota United', 'Portland Timbers', 'Real Salt Lake', 'San Diego FC', 'San Jose Earthquakes', 'Sporting Kansas City', 'St. Louis City SC', 'Vancouver Whitecaps'], tier: 4 },
+  'Costa Rica':        { clubs: ['Saprissa', 'Alajuelense'], tier: 1 },
+  'Canadá':            { clubs: ['Toronto FC', 'Vancouver Whitecaps'], tier: 2 },
+  /* Europa */
+  'Portugal':          { clubs: ['Benfica', 'Porto', 'Sporting CP', 'Braga', 'Vitória de Guimarães'], tier: 5 },
+  'Espanha':           { clubs: ['Real Madrid', 'Barcelona', 'Atlético de Madrid', 'Sevilla', 'Real Sociedad', 'Villarreal'], tier: 6 },
+  'Itália':            { clubs: ['Juventus', 'Inter de Milão', 'AC Milan', 'Napoli', 'Roma', 'Atalanta'], tier: 6 },
+  'Alemanha':          { clubs: ['Bayern de Munique', 'Borussia Dortmund', 'RB Leipzig', 'Bayer Leverkusen', 'Eintracht Frankfurt'], tier: 6 },
+  'França':            { clubs: ['Paris Saint-Germain', 'Olympique de Marselha', 'Lyon', 'Monaco', 'Lille'], tier: 6 },
+  'Inglaterra':        { clubs: ['Manchester City', 'Manchester United', 'Liverpool', 'Chelsea', 'Arsenal', 'Tottenham', 'Aston Villa', 'Bournemouth', 'Brentford', 'Brighton', 'Coventry City', 'Crystal Palace', 'Everton', 'Fulham', 'Hull City', 'Ipswich Town', 'Leeds United', 'Newcastle United', 'Nottingham Forest', 'Sunderland'], tier: 6 },
+  'Holanda':           { clubs: ['Ajax', 'PSV Eindhoven', 'Feyenoord', 'AZ Alkmaar'], tier: 5 },
+  'Bélgica':           { clubs: ['Club Brugge', 'Anderlecht', 'Genk'], tier: 4 },
+  'Escócia':           { clubs: ['Celtic', 'Rangers'], tier: 4 },
+  'Turquia':           { clubs: ['Galatasaray', 'Fenerbahçe', 'Beşiktaş'], tier: 4 },
+  'Rússia':            { clubs: ['Zenit', 'Spartak Moscou', 'CSKA Moscou'], tier: 4 },
+  'Ucrânia':           { clubs: ['Shakhtar Donetsk', 'Dynamo Kiev'], tier: 3 },
+  'Grécia':            { clubs: ['Olympiacos', 'Panathinaikos', 'AEK Atenas'], tier: 3 },
+  'Suíça':             { clubs: ['Young Boys', 'FC Basel', 'FC Zurich'], tier: 3 },
+  'Áustria':           { clubs: ['Red Bull Salzburg', 'Rapid Viena'], tier: 3 },
+  'Croácia':           { clubs: ['Dínamo Zagreb', 'Hajduk Split'], tier: 3 },
+  'Sérvia':            { clubs: ['Estrela Vermelha', 'Partizan'], tier: 3 },
+  'Polônia':           { clubs: ['Legia Varsóvia', 'Lech Poznań'], tier: 2 },
+  'Dinamarca':         { clubs: ['FC Copenhagen', 'Brøndby'], tier: 3 },
+  'Suécia':            { clubs: ['Malmö FF', 'AIK'], tier: 2 },
+  'Noruega':           { clubs: ['Rosenborg', 'Bodø/Glimt'], tier: 2 },
+  /* Ásia e Oceania */
+  'Arábia Saudita':    { clubs: ['Al-Hilal', 'Al-Nassr', 'Al-Ittihad', 'Al-Ahli'], tier: 5 },
+  'Catar':             { clubs: ['Al-Sadd', 'Al-Duhail'], tier: 3 },
+  'Emirados Árabes':   { clubs: ['Al-Ain', 'Al-Wahda'], tier: 3 },
+  'Japão':             { clubs: ['Kashima Antlers', 'Urawa Red Diamonds', 'Yokohama F. Marinos'], tier: 3 },
+  'Coreia do Sul':     { clubs: ['Ulsan HD', 'Jeonbuk Hyundai Motors'], tier: 3 },
+  'China':             { clubs: ['Shanghai Port', 'Shandong Taishan'], tier: 3 },
+  'Austrália':         { clubs: ['Melbourne Victory', 'Sydney FC'], tier: 2 },
+  /* África */
+  'Marrocos':          { clubs: ['Raja Casablanca', 'Wydad Casablanca'], tier: 2 },
+  'Egito':             { clubs: ['Al Ahly', 'Zamalek'], tier: 3 },
+  'África do Sul':     { clubs: ['Mamelodi Sundowns', 'Orlando Pirates'], tier: 2 },
+  'Argélia':           { clubs: ['ES Sétif', 'CR Belouizdad'], tier: 1 },
+  'Tunísia':           { clubs: ['Espérance de Tunis', 'Étoile du Sahel'], tier: 1 },
+  'Nigéria':           { clubs: ['Enyimba', 'Rivers United'], tier: 1 },
+  'Senegal':           { clubs: ['Casa Sports', 'Génération Foot'], tier: 1 },
+};
+const TRANSFER_COUNTRIES = Object.keys(TRANSFER_CLUBS);
+
+const CLUB_TIERS = [
+  null,
+  { tier: 1, label: 'Série D',               division: 'D', salaryBase: 3500,   prestige: 1 },
+  { tier: 2, label: 'Série C',               division: 'C', salaryBase: 9000,   prestige: 2 },
+  { tier: 3, label: 'Série B',               division: 'B', salaryBase: 24000,  prestige: 3 },
+  { tier: 4, label: 'Série A',               division: 'A', salaryBase: 55000,  prestige: 4 },
+  { tier: 5, label: 'Clube Europeu de Elite',division: 'INT', salaryBase: 140000, prestige: 5 },
+  { tier: 6, label: 'Superclube Mundial',    division: 'INT', salaryBase: 380000, prestige: 6 },
+];
+
+/* Escudos reais fornecidos pelo usuário. Mapa nome-do-clube -> URL do escudo.
+   Usado via crestImg(nome) em qualquer lugar que exibe um clube; sempre com
+   fallback gracioso (escudo genérico) caso a imagem não carregue. */
+const CLUB_CRESTS = {
+  // Série A
+  'Athletico Paranaense': 'https://escudosfc.com.br/images/atlpr.png',
+  'Atlético-MG': 'https://escudosfc.com.br/images/atletico.png',
+  'Bahia': 'https://escudosfc.com.br/images/bahia.png',
+  'Botafogo': 'https://escudosfc.com.br/images/botafogo.gif',
+  'Chapecoense': 'https://escudosfc.com.br/images/chapeco.png',
+  'Corinthians': 'https://escudosfc.com.br/images/corinthians.png',
+  'Coritiba': 'https://escudosfc.com.br/images/coritiba.png',
+  'Cruzeiro': 'https://escudosfc.com.br/images/cruzeiro.png',
+  'Flamengo': 'https://escudosfc.com.br/images/fla.png',
+  'Fluminense': 'https://escudosfc.com.br/images/fluminense.png',
+  'Grêmio': 'https://escudosfc.com.br/images/gremio.png',
+  'Internacional': 'https://escudosfc.com.br/images/interrs.png',
+  'Mirassol': 'https://escudosfc.com.br/images/mirassol.jpg',
+  'Palmeiras': 'https://escudosfc.com.br/images/palmeiras.png',
+  'Red Bull Bragantino': 'https://escudosfc.com.br/images/bragantino.png',
+  'Remo': 'https://escudosfc.com.br/images/remo.png',
+  'Santos': 'https://escudosfc.com.br/images/santos.png',
+  'São Paulo': 'https://escudosfc.com.br/images/saopaulo.png',
+  'Vasco da Gama': 'https://escudosfc.com.br/images/vasco.png',
+  'Vitória': 'https://escudosfc.com.br/images/vitoria.png',
+  // Série B
+  'América-MG': 'https://escudosfc.com.br/images/ammg.png',
+  'Atlético del Rey-MG': 'https://escudosfc.com.br/images/aletico_del_rey_mg.png',
+  'Atlético-GO': 'https://escudosfc.com.br/images/atlego.png',
+  'Avaí': 'https://escudosfc.com.br/images/avai.gif',
+  'Botafogo-SP': 'https://escudosfc.com.br/images/botasp.png',
+  'Ceará': 'https://escudosfc.com.br/images/ceara.png',
+  'CRB': 'https://escudosfc.com.br/images/crb.gif',
+  'Criciúma': 'https://escudosfc.com.br/images/criciuma.png',
+  'Cuiabá': 'https://escudosfc.com.br/images/cuiaba_mt.png',
+  'Goiás': 'https://escudosfc.com.br/images/goias.png',
+  'Grêmio Novorizontino': 'https://escudosfc.com.br/images/novorizontino_novo.jpg',
+  'Fortaleza': 'https://escudosfc.com.br/images/fortaleza.png',
+  'Juventude': 'https://escudosfc.com.br/images/juventude.png',
+  'Londrina': 'https://escudosfc.com.br/images/londrina_pr.png',
+  'Náutico': 'https://escudosfc.com.br/images/nautico.png',
+  'Operário-PR': 'https://escudosfc.com.br/images/operario_pr.png',
+  'Ponte Preta': 'https://escudosfc.com.br/images/pontepreta.gif',
+  'São Bernardo': 'https://escudosfc.com.br/images/sao_bernarndo_sp.png',
+  'Sport': 'https://escudosfc.com.br/images/sport.gif',
+  'Vila Nova': 'https://escudosfc.com.br/images/vilanova.png',
+  // MLS
+  'Atlanta United': 'https://escudosfc.com.br/images/atlanta_united%20_usa.png',
+  'Charlotte FC': 'https://escudosfc.com.br/images/charlotte_mls.png',
+  'Chicago Fire': 'https://escudosfc.com.br/images/chicago_fire.png',
+  'FC Cincinnati': 'https://escudosfc.com.br/images/cincicatti_mls.jpg',
+  'Columbus Crew': 'https://escudosfc.com.br/images/crew.png',
+  'D.C. United': 'https://escudosfc.com.br/images/dc.png',
+  'Inter Miami': 'https://escudosfc.com.br/images/inter_miami_mls.png',
+  'CF Montréal': 'https://escudosfc.com.br/images/montral_impact_new.png',
+  'Nashville SC': 'https://escudosfc.com.br/images/nashville_mls.png',
+  'New England Revolution': 'https://escudosfc.com.br/images/revol.png',
+  'New York City FC': 'https://escudosfc.com.br/images/nycfc_mls.png',
+  'New York Red Bulls': 'https://escudosfc.com.br/images/ny_red_bull.png',
+  'Orlando City': 'https://escudosfc.com.br/images/orlando_city_mls.gif',
+  'Philadelphia Union': 'https://escudosfc.com.br/images/philadelphia_union_usa.jpg',
+  'Toronto FC': 'https://escudosfc.com.br/images/toronto_fc.png',
+  'Austin FC': 'https://escudosfc.com.br/images/austin_fc_mls.png',
+  'Colorado Rapids': 'https://escudosfc.com.br/images/rapids_mls.jpg',
+  'FC Dallas': 'https://escudosfc.com.br/images/fcdallas.png',
+  'LAFC': 'https://escudosfc.com.br/images/los_angeles_shield.png',
+  'Houston Dynamo': 'https://escudosfc.com.br/images/hou_dynamos_usa.png',
+  'LA Galaxy': 'https://escudosfc.com.br/images/galaxy.png',
+  'Minnesota United': 'https://escudosfc.com.br/images/minnesota_united_nasl.png',
+  'Portland Timbers': 'https://escudosfc.com.br/images/portland_timbers_mls.png',
+  'Real Salt Lake': 'https://escudosfc.com.br/images/real_saltlake.png',
+  'San Diego FC': 'https://escudosfc.com.br/images/san_diego_fc_mls.png',
+  'San Jose Earthquakes': 'https://escudosfc.com.br/images/sanjose.png',
+  'Seattle Sounders': 'https://escudosfc.com.br/images/seattle_sounders_usa.png',
+  'Sporting Kansas City': 'https://escudosfc.com.br/images/kansascity_eua.gif',
+  'St. Louis City SC': 'https://escudosfc.com.br/images/st_louis_mls.png',
+  'Vancouver Whitecaps': 'https://escudosfc.com.br/images/whitecaps_new.gif',
+  // Liga Argentina
+  'Boca Juniors': 'https://escudosfc.com.br/images/bocc.png',
+  'Central Córdoba': 'https://escudosfc.com.br/images/central_cord_santiago_arg.png',
+  'Defensa y Justicia': 'https://escudosfc.com.br/images/defensayjusticia.png',
+  'Deportivo Riestra': 'https://escudosfc.com.br/images/deportivo_riestra_arg.png',
+  'Estudiantes': 'https://escudosfc.com.br/images/estudic.png',
+  'Gimnasia Mendoza': 'https://escudosfc.com.br/images/gimnasia_mendoza.png',
+  'Independiente': 'https://escudosfc.com.br/images/indepc.png',
+  'Instituto': 'https://escudosfc.com.br/images/instituto.png',
+  'Lanús': 'https://escudosfc.com.br/images/lanusc.png',
+  "Newell's Old Boys": 'https://escudosfc.com.br/images/newelsc.png',
+  'Platense': 'https://escudosfc.com.br/images/platensc.png',
+  'San Lorenzo': 'https://escudosfc.com.br/images/san_loc.png',
+  'Talleres': 'https://escudosfc.com.br/images/talleres.png',
+  'Vélez Sarsfield': 'https://escudosfc.com.br/images/velez.png',
+  'Unión Santa Fe': 'https://escudosfc.com.br/images/union_santa_fe.png',
+  'Aldosivi': 'https://escudosfc.com.br/images/aldosivi_arg.png',
+  'Argentinos Juniors': 'https://escudosfc.com.br/images/argentinos.png',
+  'Atlético Tucumán': 'https://escudosfc.com.br/images/attucuman.png',
+  'Banfield': 'https://escudosfc.com.br/images/banfield.png',
+  'Barracas Central': 'https://escudosfc.com.br/images/barracas_central_arg.png',
+  'Belgrano': 'https://escudosfc.com.br/images/belgrano.png',
+  'Gimnasia La Plata': 'https://escudosfc.com.br/images/glaplatc.png',
+  'Huracán': 'https://escudosfc.com.br/images/huracanc.png',
+  'Independiente Rivadavia': 'https://escudosfc.com.br/images/indepe_rivadavia.png',
+  'Racing Club': 'https://escudosfc.com.br/images/racingc.png',
+  'River Plate': 'https://escudosfc.com.br/images/riverc.png',
+  'Rosario Central': 'https://escudosfc.com.br/images/rosarioc.png',
+  'Sarmiento': 'https://escudosfc.com.br/images/sarmiento_arg.png',
+  'Tigre': 'https://escudosfc.com.br/images/tigre_arg.png',
+  // Premier League
+  'Arsenal': 'https://escudosfc.com.br/images/arsenal_crest.png',
+  'Aston Villa': 'https://escudosfc.com.br/images/aston.png',
+  'Bournemouth': 'https://escudosfc.com.br/images/bournemouth.png',
+  'Brentford': 'https://escudosfc.com.br/images/brentford.png',
+  'Brighton': 'https://escudosfc.com.br/images/brighton.png',
+  'Chelsea': 'https://escudosfc.com.br/images/chelsea.png',
+  'Coventry City': 'https://escudosfc.com.br/images/coventry.png',
+  'Crystal Palace': 'https://escudosfc.com.br/images/crystalpalace.png',
+  'Everton': 'https://escudosfc.com.br/images/everton.png',
+  'Fulham': 'https://escudosfc.com.br/images/fulham.png',
+  'Hull City': 'https://escudosfc.com.br/images/hull_city_eng.png',
+  'Ipswich Town': 'https://escudosfc.com.br/images/ipswich.png',
+  'Leeds United': 'https://escudosfc.com.br/images/leeds.png',
+  'Liverpool': 'https://escudosfc.com.br/images/liverpool.png',
+  'Manchester City': 'https://escudosfc.com.br/images/man_city.png',
+  'Manchester United': 'https://escudosfc.com.br/images/manchester.png',
+  'Newcastle United': 'https://escudosfc.com.br/images/newcastle.png',
+  'Nottingham Forest': 'https://escudosfc.com.br/images/nott.png',
+  'Sunderland': 'https://escudosfc.com.br/images/sunderland.png',
+  'Tottenham': 'https://escudosfc.com.br/images/tottenham.png',
+};
+
+function crestImg(name, size) {
+  size = size || 34;
+  const url = CLUB_CRESTS[name];
+  if (!url) return `<div class="crest-fallback" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.55)}px">🛡️</div>`;
+  return `<img class="crest-img" src="${url}" width="${size}" height="${size}" alt="" loading="lazy" onerror="this.outerHTML='<div class=&quot;crest-fallback&quot; style=&quot;width:${size}px;height:${size}px;font-size:${Math.round(size * 0.55)}px&quot;>🛡️</div>'">`;
+}
+
+const REP_LEVELS = [
+  { min: 0,    name: 'Desconhecido' },
+  { min: 40,   name: 'Promessa' },
+  { min: 120,  name: 'Jogador Profissional' },
+  { min: 280,  name: 'Destaque' },
+  { min: 550,  name: 'Estrela' },
+  { min: 1000, name: 'Craque Mundial' },
+  { min: 1800, name: 'Lenda' },
+];
+
+const AGENTS = {
+  roberto: { id:'roberto', name: 'Roberto Grana', desc: 'Fecha contratos gordos, mas cobra caro.', commission: 0.15, dealMult: 1.25, reachMult: 0.9 },
+  marcos:  { id:'marcos',  name: 'Marcos Vieira',  desc: 'Poucos contatos no Brasil, mas abre portas lá fora.', commission: 0.10, dealMult: 1.0, reachMult: 1.3 },
+  juliana: { id:'juliana', name: 'Juliana Prado',  desc: 'Comissão baixa, mas rede de contatos pequena.', commission: 0.05, dealMult: 0.85, reachMult: 0.8 },
+};
+
+const INJURIES = [
+  { name: 'Torção no tornozelo', sev: 'leve' },
+  { name: 'Estiramento muscular', sev: 'leve' },
+  { name: 'Contusão no joelho', sev: 'leve' },
+  { name: 'Lesão muscular na coxa', sev: 'moderada' },
+  { name: 'Lesão no ligamento do joelho', sev: 'moderada' },
+  { name: 'Fratura no pé', sev: 'grave' },
+];
+const INJURY_SEV = { leve: { min: 1, max: 2 }, moderada: { min: 3, max: 5 }, grave: { min: 6, max: 10 } };
+
+const AWARD_POOL = ['Artilheiro do Campeonato','Revelação do Ano','Craque da Temporada','Melhor da Final','Camisa 10 do Ano','Ídolo da Torcida'];
+const TITLE_POOL_DOMESTIC = ['Campeonato Estadual','Copa Nacional','Campeonato Nacional'];
+const TITLE_POOL_ELITE = ['Copa Continental','Mundial de Clubes'];
+
+/* =========================== 2. ESTADO / PERSISTÊNCIA =========================== */
+
+const STORAGE_KEY = 'terrao-save-v1';
+
+function freshState() {
+  return {
+    screen: 'menu',
+    createStep: 1,
+    createData: { name:'', nickname:'', age:14, position:'CA', foot:'Destro', height:170, weight:64, avatar: AVATARS[0], number: 9, style: 'artilheiro', personality: 'trabalhador' },
+    player: null,
+    pendingEvent: null,
+    pendingMatch: null,
+    pendingSummary: null,
+    pendingLegacy: null,
+  };
+}
+
+let STATE = freshState();
+
+async function persist() {
+  try {
+    const res = await window.storage.set('save', JSON.stringify(STATE), false);
+    if (!res) console.warn('Falha ao salvar (retorno vazio).');
+  } catch (e) {
+    console.warn('Falha ao salvar progresso:', e);
+  }
+}
+
+async function manualSave() {
+  await persist();
+  STATE.saveFlash = true;
+  render();
+  setTimeout(() => {
+    STATE.saveFlash = false;
+    if (STATE.screen === 'hub') render();
+  }, 1700);
+}
+
+async function hasSave() {
+  try {
+    const res = await window.storage.get('save', false);
+    return !!(res && res.value);
+  } catch (e) {
+    return false;
+  }
+}
+
+async function loadSave() {
+  try {
+    const res = await window.storage.get('save', false);
+    if (res && res.value) {
+      const parsed = JSON.parse(res.value);
+      STATE = parsed;
+      return true;
+    }
+  } catch (e) { console.warn('Falha ao carregar save:', e); }
+  return false;
+}
+
+async function wipeSave() {
+  try { await window.storage.delete('save', false); } catch (e) { /* chave pode não existir */ }
+}
+
+/* =========================== 3. UTILITÁRIOS =========================== */
+
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function randf(min, max) { return Math.random() * (max - min) + min; }
+function pick(arr) { return arr[rand(0, arr.length - 1)]; }
+function chance(p) { return Math.random() < p; }
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+function fmtMoney(n) {
+  const neg = n < 0;
+  n = Math.round(Math.abs(n));
+  const s = n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  return (neg ? '-R$ ' : 'R$ ') + s;
+}
+
+function capAttrVal(v) { return clamp(Math.round(v), 1, 99); }
+
+function addLog(text) {
+  if (!STATE.player) return;
+  STATE.player.log.unshift(text);
+  if (STATE.player.log.length > CONFIG.LOG_MAX) STATE.player.log.length = CONFIG.LOG_MAX;
+}
+
+function personalityFx(key) {
+  const p = STATE.player && PERSONALITIES[STATE.player.personality];
+  if (!p) return 0;
+  return p.effects[key] || 0;
+}
+
+function overallRating(p) {
+  const pos = POSITIONS[p.position];
+  const primaryAvg = pos.primary.reduce((s, k) => s + p.attrs[k], 0) / pos.primary.length;
+  const allAvg = ATTR_KEYS.reduce((s, k) => s + p.attrs[k], 0) / ATTR_KEYS.length;
+  return Math.round(primaryAvg * 0.65 + allAvg * 0.35);
+}
+
+function repLevelIndex(points) {
+  let lvl = 1;
+  for (let i = 0; i < REP_LEVELS.length; i++) if (points >= REP_LEVELS[i].min) lvl = i + 1;
+  return lvl;
+}
+function repLevelName(points) { return REP_LEVELS[repLevelIndex(points) - 1].name; }
+
+function growAttr(p, key, amount) { p.attrs[key] = capAttrVal(p.attrs[key] + amount); }
+
+function effectiveMatchStrength(p) {
+  const base = overallRating(p);
+  const fatiguePenalty = (p.fatigue / 100) * 14;
+  const moraleBonus = (p.morale - 50) / 50 * 8;
+  return clamp(Math.round(base - fatiguePenalty + moraleBonus), 1, 99);
+}
+
+/* =========================== 4. CRIAÇÃO DE PERSONAGEM =========================== */
+
+function newGameStart() {
+  STATE = freshState();
+  STATE.screen = 'create';
+  STATE.createStep = 1;
+  render();
+}
+
+function updateCreate(field, value) {
+  STATE.createData[field] = value;
+  if (field === 'position') {
+    STATE.createData.number = POSITIONS[value].numberSuggest;
+  }
+  render();
+}
+
+function createNextStep() {
+  if (STATE.createStep < 4) { STATE.createStep++; render(); }
+  else finalizeCreation();
+}
+function createPrevStep() {
+  if (STATE.createStep > 1) { STATE.createStep--; render(); }
+  else { STATE.screen = 'menu'; render(); }
+}
+
+function finalizeCreation() {
+  const d = STATE.createData;
+  const pos = POSITIONS[d.position];
+  const style = STYLES[d.style];
+  const pers = PERSONALITIES[d.personality];
+  const startBonus = pers.effects.startAttrBonus || 0;
+
+  const attrs = {};
+  ATTR_KEYS.forEach(k => {
+    let v = 30 + rand(-4, 4) + startBonus;
+    if (pos.primary.includes(k)) v += 14;
+    if (style.main === k) v += 8;
+    if (style.sub === k) v += 4;
+    attrs[k] = capAttrVal(v);
+  });
+
+  const player = {
+    name: d.name.trim() || 'Jogador', nickname: d.nickname.trim(), age: 17,
+    position: d.position, foot: d.foot, height: d.height, weight: d.weight,
+    avatar: d.avatar, hairstyle: 'padrao', number: d.number, style: d.style, personality: d.personality,
+    attrs, fatigue: 10, morale: 68, squadStatus: 'titular',
+    trainingFocus: pos.primary[0],
+    reputation: 0, money: 0, followers: rand(20, 80),
+    phase: 'pro', week: 1, season: 1,
+    club: null, contract: null, agent: null,
+    friends: FRIENDS_INIT.map(f => ({ ...f })),
+    rival: null,
+    romance: { status: 'solteiro', partner: null },
+    investments: [], vehicles: [], properties: [], bills: [],
+    nationalTeam: { level: 0, caps: 0, goals: 0 },
+    injury: null,
+    injuryHistory: [],
+    ratingHistory: [],
+    stats: { matches: 0, goals: 0, assists: 0, titles: 0, caps: 0, natGoals: 0, clubsCount: 0, maxValue: 0 },
+    trophies: [], awardsLog: [],
+    history: [],
+    flags: {},
+    bairro: { matchesPlayed: 0, wins: 0, scoutMeter: 0 },
+    base: { seasonsDone: 0 },
+    seasonStats: { matches: 0, goals: 0, assists: 0, ratingSum: 0 },
+    log: [],
+  };
+
+  STATE.player = player;
+  player.startAttrs = { ...attrs };
+  addLog(`Aos 17 anos, ${player.name} assina os primeiros contatos com o profissional. ⚽`);
+  presentInitialOffers();
+}
+
+function pickDefaultFocus(p) {
+  return POSITIONS[p.position].primary[0];
+}
+
+/* =========================== 5. TREINO / ATRIBUTOS =========================== */
+
+const TRAINING_TYPES = {
+  finalizacao: { label: 'Finalização', icon: '🎯', attrs: ['finalizacao'] },
+  drible:      { label: 'Drible',      icon: '🌀', attrs: ['drible'] },
+  passe:       { label: 'Passe',       icon: '🎽', attrs: ['passe'] },
+  desarme:     { label: 'Desarme',     icon: '🧱', attrs: ['desarme'] },
+  velocidade:  { label: 'Velocidade',  icon: '💨', attrs: ['velocidade'] },
+  forca:       { label: 'Força',       icon: '🏋️', attrs: ['forca'] },
+  resistencia: { label: 'Resistência', icon: '🔋', attrs: ['resistencia'] },
+  bolaparada:  { label: 'Bola Parada', icon: '🥅', attrs: ['finalizacao', 'passe'] },
+  tatica:      { label: 'Visão Tática',icon: '🧠', attrs: ['visao', 'concentracao'] },
+};
+
+function doTraining(typeKey) {
+  const p = STATE.player;
+  const t = TRAINING_TYPES[typeKey];
+  const mult = clamp(1 + personalityFx('trainingMult') - p.fatigue / 140, 0.4, 1.9);
+  const parts = [];
+  t.attrs.forEach(a => {
+    const current = p.attrs[a];
+    const diminish = clamp(1.15 - current / 105, 0.12, 1);
+    const gain = Math.max(0, Math.round(rand(1, 2) * mult * diminish));
+    if (gain > 0) { growAttr(p, a, gain); parts.push(`${ATTR_LABELS[a]} +${gain}`); }
+    else parts.push(`${ATTR_LABELS[a]} (perto do limite)`);
+  });
+  p.fatigue = clamp(p.fatigue + rand(4, 8), 0, 100);
+  p.morale = clamp(p.morale + rand(0, 2), 0, 100);
+  addLog(`💪 Treino de ${t.label}: ${parts.join(', ')}.`);
+  if (p.fatigue >= 92 && chance(0.05)) triggerInjury('excesso de treino');
+}
+
+function doRest() {
+  const p = STATE.player;
+  p.fatigue = clamp(p.fatigue - rand(22, 32), 0, 100);
+  p.morale = clamp(p.morale + rand(4, 9), 0, 100);
+  addLog('😴 Você descansou e recuperou o fôlego.');
+}
+
+function triggerInjury(source) {
+  const p = STATE.player;
+  const inj = pick(INJURIES);
+  const range = INJURY_SEV[inj.sev];
+  const turns = rand(range.min, range.max);
+  p.injury = { name: inj.name, sev: inj.sev, turnsLeft: turns, totalTurns: turns, source, triedEarly: false };
+  p.fatigue = clamp(p.fatigue - 10, 0, 100);
+  p.morale = clamp(p.morale - 12, 0, 100);
+  p.injuryHistory.push({ name: inj.name, sev: inj.sev, turns, age: p.age, week: p.week });
+  addLog(`🩹 Lesão (${inj.sev}): ${inj.name}. Previsão: ${turns} semana(s) fora.`);
+}
+
+/* =========================== 6. MOTOR DE PARTIDA =========================== */
+
+const ROLE_OPTIONS = {
+  ataque: [
+    { label: 'Finalizar de primeira', attr: 'finalizacao', base: 0.50, kind: 'goal' },
+    { label: 'Ajeitar e bater', attr: 'drible', base: 0.55, kind: 'goal' },
+    { label: 'Tocar pro companheiro', attr: 'passe', base: 0.68, kind: 'assist' },
+  ],
+  meio: [
+    { label: 'Arriscar o passe entre linhas', attr: 'visao', base: 0.55, kind: 'assist' },
+    { label: 'Tentar o drible e avançar', attr: 'drible', base: 0.50, kind: 'goal' },
+    { label: 'Recuar e proteger a bola', attr: 'passe', base: 0.72, kind: 'safe' },
+  ],
+  defesa: [
+    { label: 'Antecipar e cortar', attr: 'desarme', base: 0.55, kind: 'stop' },
+    { label: 'Ganhar no braço', attr: 'forca', base: 0.55, kind: 'stop' },
+    { label: 'Cobrir o espaço e observar', attr: 'concentracao', base: 0.70, kind: 'safe' },
+  ],
+  goleiro: [
+    { label: 'Se lançar no ângulo', attr: 'concentracao', base: 0.50, kind: 'stop' },
+    { label: 'Ficar na linha e reduzir o ângulo', attr: 'visao', base: 0.60, kind: 'stop' },
+    { label: 'Gritar e reorganizar a zaga', attr: 'lideranca', base: 0.70, kind: 'safe' },
+  ],
+};
+
+const SCENARIO_TEXT = {
+  ataque: {
+    normal: ['A bola sobra livre na entrada da área.', 'Você recebe entre os zagueiros, de costas pro gol.'],
+    marquee: ['O jogo está aberto e você fica cara a cara com o goleiro.', 'A defesa vacila e a bola sobra só pra você.'],
+    final: ['No minuto derradeiro da final, a bola sobra dentro da área.'],
+    debut: ['Na sua estreia, a primeira grande chance aparece.'],
+    peneira: ['No coletivo da peneira, você recebe na entrada da área.'],
+  },
+  meio: {
+    normal: ['Você recebe de costas, com espaço pra virar o jogo.', 'A bola chega nos seus pés, com tempo pra pensar.'],
+    marquee: ['O jogo pede uma decisão sua no meio-campo.', 'Você vê o lance se formando e precisa decidir rápido.'],
+    final: ['No apagar das luzes da final, tudo passa pelos seus pés.'],
+    debut: ['Na estreia, o time te procura pra armar a jogada decisiva.'],
+    peneira: ['O treinador quer ver sua leitura de jogo no coletivo.'],
+  },
+  defesa: {
+    normal: ['O atacante adversário parte em velocidade pra cima de você.', 'A bola sobra na área e é ataque contra defesa.'],
+    marquee: ['O adversário fica cara a cara com o gol — só você no lance.', 'É contra-ataque perigoso, e você é a última barreira.'],
+    final: ['Nos minutos finais da decisão, o adversário ataca em desespero.'],
+    debut: ['Na estreia, o primeiro grande susto vem correndo em sua direção.'],
+    peneira: ['O treinador manda um teste: ataque contra defesa, você contra o atacante.'],
+  },
+  goleiro: {
+    normal: ['O adversário bate cruzado, cara a cara com você.', 'É um chute forte de fora da área.'],
+    marquee: ['Pênalti — o gol depende de você agora.', 'A bola vem cruzada e só você separa o adversário do gol.'],
+    final: ['Nos acréscimos da final, tudo se resume a essa defesa.'],
+    debut: ['Na estreia, a primeira grande defesa aparece cedo.'],
+    peneira: ['O treinador organiza cobranças de pênalti pra te avaliar.'],
+  },
+};
+
+function poissony(lambda) {
+  const L = Math.exp(-Math.max(0.08, lambda));
+  let k = 0, p = 1;
+  do { k++; p *= Math.random(); } while (p > L && k < 8);
+  return clamp(k - 1, 0, 7);
+}
+
+const PENALTY_TEXT = {
+  cobrando: ['O árbitro aponta para a marca da cal — pênalti a seu favor!', 'Depois do lance na área, o juiz não tem dúvida: pênalti!'],
+  defendendo: ['O árbitro assinala pênalti contra o seu time. Tudo em suas mãos agora.', 'Pênalti contra! A torcida faz silêncio — é você contra o cobrador.'],
+};
+const PENALTY_ZONES = ['se', 'sc', 'sd', 'ie', 'id'];
+const PENALTY_ZONE_WEIGHTED = ['se', 'se', 'sc', 'sd', 'sd', 'ie', 'ie', 'id', 'id'];
+
+function generateBigMoment(p, importance) {
+  const role = POSITIONS[p.position].role;
+  if ((role === 'ataque' || role === 'meio') && chance(0.14)) {
+    return { role, importance, isPenalty: true, penaltyRole: 'cobrando', text: pick(PENALTY_TEXT.cobrando) };
+  }
+  if (role === 'goleiro' && chance(0.13)) {
+    return { role, importance, isPenalty: true, penaltyRole: 'defendendo', text: pick(PENALTY_TEXT.defendendo) };
+  }
+  const options = ROLE_OPTIONS[role];
+  const texts = SCENARIO_TEXT[role][importance] || SCENARIO_TEXT[role].normal;
+  return { role, importance, isPenalty: false, text: pick(texts), options };
+}
+
+function beginMatch(opts) {
+  const p = STATE.player;
+  const myStrength = effectiveMatchStrength(p);
+  const teamBase = opts.teamStrength != null ? opts.teamStrength : myStrength;
+  const oppStrength = opts.opponentStrength;
+
+  let myGoalsTeam, oppGoalsTeam;
+  if (opts.importance === 'final') {
+    oppGoalsTeam = rand(1, 2);
+    myGoalsTeam = oppGoalsTeam - 1;
+  } else {
+    const diff = (teamBase - oppStrength) / 18;
+    myGoalsTeam = poissony(clamp(1.1 + diff, 0.2, 3.4));
+    oppGoalsTeam = poissony(clamp(1.1 - diff, 0.2, 3.4));
+  }
+
+  const willHaveBigMoment = opts.importance !== 'normal' ? true : chance(0.4);
+
+  STATE.pendingMatch = {
+    opponentName: opts.opponentName, importance: opts.importance,
+    myGoalsTeam, oppGoalsTeam, myStrength, oppStrength,
+    playerGoals: 0, playerAssists: 0, bigMoment: null,
+    onResolve: opts.onResolve, context: opts.context || {}, ratingNote: 0,
+  };
+
+  if (willHaveBigMoment) {
+    STATE.pendingMatch.bigMoment = generateBigMoment(p, opts.importance);
+    STATE.screen = STATE.pendingMatch.bigMoment.isPenalty ? 'penalty' : 'match-moment';
+  } else {
+    finishMatch();
+    STATE.screen = 'match-result';
+  }
+  render();
+}
+
+function applyBigMomentOutcome(pm, opt, success) {
+  const p = STATE.player;
+  if (pm.importance === 'final') {
+    if (success) {
+      pm.myGoalsTeam = pm.oppGoalsTeam + 1;
+      if (opt.kind === 'assist') pm.playerAssists++; else pm.playerGoals++;
+      pm.ratingNote = 2.2;
+      pm.momentText = '🔥 Você vira o jogo nos minutos finais! Herói da decisão.';
+    } else {
+      pm.ratingNote = -0.6;
+      pm.momentText = 'A chance passa perto, mas não sai. O apito final confirma a derrota.';
+    }
+    return;
+  }
+  if (opt.kind === 'goal') {
+    if (success) { pm.playerGoals++; pm.myGoalsTeam++; pm.ratingNote = 1.4; pm.momentText = '⚽ GOL! Você balança a rede.'; }
+    else { pm.ratingNote = -0.3; pm.momentText = 'Você tenta, mas a bola não entra dessa vez.'; }
+  } else if (opt.kind === 'assist') {
+    if (success) { pm.playerAssists++; pm.myGoalsTeam++; pm.ratingNote = 1.0; pm.momentText = '🎯 Assistência! O companheiro não perdoa.'; }
+    else { pm.ratingNote = -0.2; pm.momentText = 'O passe não encontra o companheiro certo.'; }
+  } else if (opt.kind === 'stop') {
+    if (success) {
+      if (pm.oppGoalsTeam > 0) pm.oppGoalsTeam--;
+      pm.ratingNote = 1.2;
+      pm.momentText = '🛡️ Intervenção decisiva! Você evita o gol adversário.';
+    } else {
+      pm.oppGoalsTeam++;
+      pm.ratingNote = -0.4;
+      pm.momentText = 'Dessa vez o adversário leva a melhor.';
+    }
+  } else {
+    if (success) { pm.ratingNote = 0.5; pm.momentText = 'Decisão segura — você mantém o equilíbrio do time.'; }
+    else { pm.ratingNote = -0.1; pm.momentText = 'Não foi a melhor escolha, mas sem grandes danos.'; }
+  }
+}
+
+function chooseBigMoment(optionIndex) {
+  const pm = STATE.pendingMatch;
+  const p = STATE.player;
+  const opt = pm.bigMoment.options[optionIndex];
+  const attrVal = p.attrs[opt.attr];
+  let successP = opt.base + (attrVal - 50) / 160;
+  successP += personalityFx('bigMomentMult');
+  if (pm.myGoalsTeam <= pm.oppGoalsTeam) successP += personalityFx('clutchMult');
+  successP = clamp(successP, 0.12, 0.93);
+
+  const success = chance(successP);
+  pm.bigMoment.chosenLabel = opt.label;
+  pm.bigMoment.success = success;
+  applyBigMomentOutcome(pm, opt, success);
+  finishMatch();
+  STATE.screen = 'match-result';
+  render();
+}
+
+function pickKeeperZone() { return pick(PENALTY_ZONE_WEIGHTED); }
+
+function resolvePenalty(myZone) {
+  const pm = STATE.pendingMatch;
+  const p = STATE.player;
+  const bm = pm.bigMoment;
+  const keeperZone = pickKeeperZone();
+  const matched = myZone === keeperZone;
+  let scored;
+
+  if (bm.penaltyRole === 'cobrando') {
+    if (!matched) scored = true;
+    else {
+      const scoreChance = clamp(0.22 + (p.attrs.finalizacao - 50) / 140, 0.08, 0.55);
+      scored = chance(scoreChance);
+    }
+  } else {
+    if (!matched) scored = true;
+    else {
+      const saveSkill = (p.attrs.concentracao + p.attrs.forca) / 2;
+      const saveChance = clamp(0.45 + (saveSkill - 50) / 140, 0.20, 0.80);
+      scored = !chance(saveChance);
+    }
+  }
+
+  bm.myZone = myZone; bm.keeperZone = keeperZone; bm.matched = matched; bm.scored = scored;
+  bm.chosenLabel = 'Pênalti';
+
+  if (bm.penaltyRole === 'cobrando') {
+    if (scored) {
+      pm.playerGoals++; pm.myGoalsTeam++; pm.ratingNote = 1.5; bm.success = true;
+      pm.momentText = matched ? '⚽ GOL, mesmo com o goleiro no canto certo! Categoria pura na cobrança.' : '⚽ GOL! O goleiro foi para o outro lado.';
+    } else {
+      pm.ratingNote = -0.5; bm.success = false;
+      pm.momentText = '🧤 DEFESA! O goleiro adivinhou o canto e espalmou a cobrança.';
+    }
+  } else {
+    if (!scored) {
+      pm.ratingNote = 1.6; bm.success = true;
+      if (pm.oppGoalsTeam > 0) pm.oppGoalsTeam--;
+      pm.momentText = matched ? '🧤 DEFESA! Você pulou para o canto certo e segurou.' : '🧤 Que reflexo! Você pegou a bola no susto.';
+    } else {
+      pm.ratingNote = -0.6; bm.success = false;
+      pm.oppGoalsTeam++;
+      pm.momentText = matched ? 'Você pulou certo, mas o chute foi forte demais para defender.' : 'Você pulou para o lado errado — gol do adversário.';
+    }
+  }
+
+  finishMatch();
+  STATE.screen = 'match-result';
+  render();
+}
+
+function finishMatch() {
+  const p = STATE.player;
+  const pm = STATE.pendingMatch;
+  const diff = pm.myGoalsTeam - pm.oppGoalsTeam;
+  let rating = 6.0 + (pm.myStrength - pm.oppStrength) / 40 + diff * 0.15 + (pm.ratingNote || 0);
+  rating += pm.playerGoals * 0.5 + pm.playerAssists * 0.3;
+  pm.rating = Math.round(clamp(rating, 2, 10) * 10) / 10;
+  pm.result = diff > 0 ? 'vitoria' : diff === 0 ? 'empate' : 'derrota';
+
+  p.stats.matches++;
+  p.stats.goals += pm.playerGoals;
+  p.stats.assists += pm.playerAssists;
+  if (p.phase === 'pro') {
+    p.seasonStats.matches++;
+    p.seasonStats.goals += pm.playerGoals;
+    p.seasonStats.assists += pm.playerAssists;
+    p.seasonStats.ratingSum += pm.rating;
+    if (pm.result === 'vitoria') p.seasonStats.wins = (p.seasonStats.wins || 0) + 1;
+    else if (pm.result === 'empate') p.seasonStats.draws = (p.seasonStats.draws || 0) + 1;
+    else p.seasonStats.losses = (p.seasonStats.losses || 0) + 1;
+  }
+  p.ratingHistory.push({ week: p.week, season: p.season, opponent: pm.opponentName, result: pm.result, myGoals: pm.myGoalsTeam, oppGoals: pm.oppGoalsTeam, rating: pm.rating, playerGoals: pm.playerGoals, playerAssists: pm.playerAssists });
+  if (p.ratingHistory.length > 200) p.ratingHistory.shift();
+
+  p.fatigue = clamp(p.fatigue + rand(5, 10), 0, 100);
+  const resultDelta = pm.result === 'vitoria' ? rand(3, 7) : pm.result === 'empate' ? rand(-1, 2) : rand(-6, -2);
+  const perfDelta = pm.rating >= 8 ? rand(3, 6) : pm.rating >= 6.5 ? rand(0, 2) : pm.rating >= 5 ? 0 : rand(-6, -3);
+  const moraleDelta = resultDelta + perfDelta;
+  p.morale = clamp(p.morale + moraleDelta, 0, 100);
+
+  let repGain = Math.round((pm.rating - 5) * 3.2);
+  if (pm.importance === 'final') repGain += 12;
+  if (pm.importance === 'marquee') repGain += 4;
+  if (pm.importance === 'debut') repGain += 6;
+  if (pm.context && pm.context.squadStatus === 'reserva') repGain = Math.round(repGain * 0.55);
+  pm.repGain = Math.max(0, repGain);
+  p.reputation += pm.repGain;
+
+  if (pm.rating >= 7 && chance(0.26 + personalityFx('matchLearnMult'))) {
+    const k = pick(POSITIONS[p.position].primary);
+    if (p.attrs[k] < 96 || chance(0.15)) { growAttr(p, k, 1); pm.learnedAttr = k; }
+  }
+
+  let injChance = 0.035 + (p.fatigue > 70 ? (p.fatigue - 70) / 300 : 0);
+  if (['ZC', 'VOL', 'CA', 'LD', 'LE'].includes(p.position)) injChance += 0.008;
+  if (p.position === 'GO') injChance -= 0.015;
+  if (pm.importance === 'final' || pm.importance === 'marquee') injChance += 0.01;
+  if (!p.injury && chance(clamp(injChance, 0.01, 0.3))) {
+    triggerInjury('partida');
+    pm.gotInjured = true;
+  }
+
+  addLog(`⚽ ${pm.result === 'vitoria' ? 'Vitória' : pm.result === 'empate' ? 'Empate' : 'Derrota'} vs ${pm.opponentName}: ${pm.myGoalsTeam}x${pm.oppGoalsTeam}. Nota ${pm.rating}.`);
+  persist();
+}
+
+function continueAfterMatch() {
+  const pm = STATE.pendingMatch;
+  if (!pm) { STATE.screen = 'hub'; render(); return; }
+  if (pm.onResolve === 'bairro') return continueBairro();
+  if (pm.onResolve === 'base') return continueBase();
+  if (pm.onResolve === 'pro') return continuePro();
+  if (pm.onResolve === 'national') return continueNational();
+  STATE.screen = 'hub'; STATE.pendingMatch = null; render();
+}
+
+/* =========================== 7. FASE: BAIRRO =========================== */
+
+function bairroPlayWeek(trainKey) {
+  const p = STATE.player;
+  if (p.injury) return; // segurança
+  if (trainKey === 'rest') doRest(); else doTraining(trainKey);
+
+  const oppStrength = clamp(overallRating(p) + rand(-10, 8), 15, 70);
+  p.bairro.matchesPlayed++;
+  const isFinal = p.bairro.matchesPlayed >= CONFIG.BAIRRO_MATCHES;
+  beginMatch({
+    opponentName: genClubName(1),
+    opponentStrength: oppStrength,
+    teamStrength: overallRating(p) + rand(-4, 6),
+    importance: isFinal ? 'final' : 'normal',
+    onResolve: 'bairro',
+  });
+}
+
+function continueBairro() {
+  const p = STATE.player;
+  const pm = STATE.pendingMatch;
+  if (pm.result === 'vitoria') p.bairro.wins++;
+  if (chance(0.22 + pm.rating / 40)) {
+    p.bairro.scoutMeter++;
+    addLog(`👀 Um olheiro do ${genClubName(2)} assistiu à partida.`);
+  }
+  STATE.pendingMatch = null;
+
+  if (p.bairro.matchesPlayed >= CONFIG.BAIRRO_MATCHES) {
+    STATE.pendingEvent = buildScoutedEvent();
+    STATE.screen = 'event';
+  } else if (!maybeQueuePostMatchEvent(pm)) {
+    STATE.screen = 'hub';
+  }
+  persist();
+  render();
+}
+
+function buildScoutedEvent() {
+  const p = STATE.player;
+  const good = p.bairro.wins >= 3 || p.reputation >= 30;
+  p.flags.peneiraClubBig = good;
+  return {
+    title: 'Fim do Campeonato de Bairro', stamp: 'BAIRRO',
+    body: [
+      `O time terminou a campanha com ${p.bairro.wins} vitória(s) em ${CONFIG.BAIRRO_MATCHES} jogos.`,
+      good ? 'A sua atuação chamou atenção: um olheiro te convida para uma peneira num clube de peso.'
+           : 'Mesmo assim, alguém te viu jogar: você recebe o convite para uma peneira.',
+    ],
+    choices: [{ label: 'Ir para a peneira', onclick: 'startPeneira()' }],
+  };
+}
+
+/* =========================== 8. FASE: PENEIRA =========================== */
+
+function startPeneira() {
+  const p = STATE.player;
+  STATE.pendingEvent = {
+    title: p.flags.peneiraClubBig ? 'Peneira — Clube Grande' : 'Peneira', stamp: 'PENEIRA',
+    body: [
+      `Você chega ao centro de treinamento do ${genClubName(p.flags.peneiraClubBig ? 3 : 1)}. Dezenas de garotos disputam poucas vagas.`,
+      'O treinador observa técnica, físico e atitude.',
+    ],
+    choices: [{ label: 'Começar avaliação', onclick: 'peneiraChecks()' }],
+  };
+  STATE.screen = 'event';
+  persist(); render();
+}
+
+function peneiraChecks() {
+  const p = STATE.player;
+  const primary = POSITIONS[p.position].primary;
+  let successes = 0;
+  const details = [];
+  primary.forEach(k => {
+    const prob = clamp(p.attrs[k] / 99 * 0.9, 0.15, 0.92);
+    const ok = chance(prob);
+    if (ok) successes++;
+    details.push(`${ok ? '✅' : '⏳'} ${ATTR_LABELS[k]}`);
+  });
+  resolvePeneira(successes, details);
+}
+
+function resolvePeneira(successes, details) {
+  const p = STATE.player;
+  let title, extra;
+  if (successes >= 2) {
+    title = 'Aprovado!';
+    extra = p.flags.peneiraClubBig ? 'Você é aprovado direto para a base de um clube grande.' : 'Você é aprovado para a base do clube.';
+  } else if (successes === 1) {
+    title = 'Em avaliação';
+    extra = '"Você tem talento, mas precisa evoluir." O treinador te dá uma chance na base mesmo assim.';
+  } else {
+    title = 'Não foi dessa vez...';
+    extra = 'Esse clube não te quer agora — mas um olheiro de um clube menor te chama pra tentar lá.';
+  }
+  STATE.pendingEvent = {
+    title, stamp: 'PENEIRA',
+    body: [...details, '', extra],
+    choices: [{ label: 'Continuar', onclick: `enterBase(${successes})` }],
+  };
+  STATE.screen = 'event';
+  render();
+}
+
+function enterBase(successes) {
+  const p = STATE.player;
+  const tier = p.flags.peneiraClubBig ? (successes >= 2 ? 3 : 2) : (successes >= 2 ? 2 : 1);
+  p.club = { name: genClubName(tier), tier, country: 'Brasil' };
+  p.history.push({ name: p.club.name, tier, phase: 'base' });
+  p.stats.clubsCount++;
+  p.phase = 'base';
+  p.base.seasonsDone = 0;
+  p.week = 1;
+  p.rival = { name: randomName('m'), form: overallRating(p) + rand(-6, 10), starter: true, matchesAsStarter: 0 };
+  addLog(`🏟️ Você entra na base do ${p.club.name}.`);
+  addLog(`Seu concorrente pela posição: ${p.rival.name}.`);
+  STATE.pendingEvent = null;
+  STATE.screen = 'hub';
+  persist();
+  render();
+}
+
+/* =========================== 9. FASE: BASE =========================== */
+
+function isPlayerStarting() {
+  const p = STATE.player;
+  return overallRating(p) + p.reputation / 50 >= p.rival.form;
+}
+
+function updateRivalForm() {
+  const p = STATE.player;
+  p.rival.form = clamp(p.rival.form + rand(-3, 3), 20, 95);
+}
+
+function baseWeekAction(trainKey) {
+  const p = STATE.player;
+  if (p.injury) return;
+  if (trainKey === 'rest') doRest(); else doTraining(trainKey);
+  p.week++;
+  updateRivalForm();
+  applyWeeklyPassives();
+
+  const seasonTurn = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
+  const isSeasonFinal = seasonTurn === CONFIG.TURNS_PER_SEASON;
+
+  if (p.morale < 20) {
+    p.squadStatus = 'fora';
+    addLog('📋 Moral lá embaixo: o técnico nem te relacionou pra esse jogo.');
+    advanceFriendsRandom();
+    if (isSeasonFinal) { p.base.seasonsDone++; p.age++; finishBaseSeasonSummary(); }
+    else { STATE.screen = 'hub'; }
+    persist(); render();
+    return;
+  }
+
+  const starting = isPlayerStarting();
+  p.squadStatus = starting ? 'titular' : 'reserva';
+  const oppStrength = clamp(35 + p.club.tier * 8 + rand(-8, 8), 20, 90);
+
+  beginMatch({
+    opponentName: genClubName(p.club.tier), opponentStrength: oppStrength,
+    teamStrength: overallRating(p) + p.club.tier * 3 + rand(-4, 4),
+    importance: isSeasonFinal ? 'final' : 'normal',
+    onResolve: 'base', context: { starting, squadStatus: p.squadStatus },
+  });
+}
+
+function continueBase() {
+  const p = STATE.player;
+  const pm = STATE.pendingMatch;
+  const wasStarting = pm.context.starting;
+  if (pm.rating >= 7.5 && !wasStarting) {
+    p.rival.form = clamp(p.rival.form - rand(4, 8), 15, 95);
+    addLog('📈 Atuação de gala saindo do banco — você ganha espaço na equipe.');
+  } else if (pm.rating < 5.5 && wasStarting) {
+    p.rival.form = clamp(p.rival.form + rand(2, 5), 15, 95);
+  }
+
+  const seasonTurn = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
+  const isSeasonEnd = seasonTurn === CONFIG.TURNS_PER_SEASON;
+  STATE.pendingMatch = null;
+
+  if (isSeasonEnd) {
+    p.base.seasonsDone++;
+    p.age++;
+    finishBaseSeasonSummary();
+  } else if (!maybeQueuePostMatchEvent(pm)) {
+    STATE.screen = 'hub';
+  }
+  persist();
+  render();
+}
+
+function finishBaseSeasonSummary() {
+  const p = STATE.player;
+  const wonTitle = chance(0.16 + p.club.tier * 0.04);
+  const lines = [`Temporada ${p.base.seasonsDone} de base concluída. Você tem ${p.age} anos.`];
+  if (wonTitle) {
+    const titleName = 'Copa Estadual de Base';
+    p.trophies.push({ name: titleName, season: p.season, age: p.age, club: p.club.name });
+    p.stats.titles++;
+    lines.push(`🏆 Seu time conquistou a ${titleName}!`);
+  }
+  const proceed = p.base.seasonsDone >= CONFIG.BASE_SEASONS || (p.base.seasonsDone >= 1 && p.reputation >= 150);
+  lines.push(proceed ? 'Times profissionais já observam você de perto...' : 'Mais uma temporada de base pela frente.');
+
+  STATE.pendingSummary = { title: 'Fim de Temporada — Base', stamp: 'BASE', lines, kind: 'base-end', proceed };
+  STATE.screen = 'summary';
+}
+
+/* =========================== 10. CONTRATO PROFISSIONAL =========================== */
+
+const CLUB_AMBITION_BY_TIER = { 1: 'Acesso', 2: 'Acesso', 3: 'Consolidação', 4: 'Título Nacional', 5: 'Título Continental', 6: 'Título Mundial' };
+const OFFER_QUOTES = [
+  'A diretoria acredita que você pode ser peça-chave para o projeto.',
+  'O departamento de captação aposta em você como reforço estratégico.',
+  'A comissão técnica considera seu perfil ideal para o sistema de jogo.',
+  'O clube quer valorizar atletas jovens e enxerga potencial em você.',
+  'A torcida já está de olho no seu nome desde as categorias de base.',
+  'O técnico pediu você especificamente para reforçar o elenco.',
+];
+const OFFER_OBJECTIVES_POOL = [
+  'Conquistar o acesso', 'Consolidar a equipe na divisão', 'Valorizar atletas jovens',
+  'Construir uma identidade de jogo reconhecível', 'Brigar por vaga em competição continental',
+  'Reconstruir a confiança do elenco', 'Brigar pelo título da divisão', 'Terminar entre os primeiros colocados',
+];
+
+function computeCompatibility(p, tier) {
+  const rating = overallRating(p);
+  const expected = 28 + tier * 9;
+  const diff = rating - expected;
+  return clamp(Math.round(65 + diff * 1.3 + rand(-7, 7)), 38, 97);
+}
+
+function buildOfferCard(tier, agent, roleHint) {
+  const t = CLUB_TIERS[clamp(tier, 1, 6)];
+  const p = STATE.player;
+  const role = roleHint || pick(['titular', 'rotação', 'reserva']);
+  const roleMult = role === 'titular' ? 0.85 : role === 'rotação' ? 1.0 : 1.15;
+  const salary = Math.round(t.salaryBase * roleMult * agent.dealMult * randf(0.85, 1.2) / 100) * 100;
+  const years = pick([2, 2, 3, 3, 4]);
+  const isIntl = t.tier >= 5;
+  let club, country;
+  if (isIntl) {
+    const pool = TRANSFER_COUNTRIES.filter(c => TRANSFER_CLUBS[c].tier === t.tier);
+    country = pick(pool.length ? pool : TRANSFER_COUNTRIES);
+    club = pick(TRANSFER_CLUBS[country].clubs);
+  } else {
+    club = genClubName(t.tier);
+    country = 'Brasil';
+  }
+  return {
+    club, tier: t.tier, division: t.division, country,
+    compat: computeCompatibility(p, t.tier),
+    quote: pick(OFFER_QUOTES),
+    years, salary, signingBonus: Math.round(salary * randf(1.5, 4) / 100) * 100,
+    role, squadLevel: clamp(30 + t.tier * 10 + rand(-6, 6), 20, 96),
+    ambition: CLUB_AMBITION_BY_TIER[t.tier] || 'Consolidação',
+    objectives: pickN(OFFER_OBJECTIVES_POOL, 3),
+  };
+}
+
+function presentAgentChoice() {
+  STATE.pendingEvent = {
+    title: 'Escolha seu Empresário', stamp: 'CONTRATO',
+    body: ['Antes de qualquer proposta profissional, você precisa de alguém pra representar seus interesses no mercado.'],
+    choices: Object.values(AGENTS).map(a => ({
+      label: `${a.name} — comissão ${Math.round(a.commission * 100)}%`, sub: a.desc,
+      onclick: `chooseAgentInitial('${a.id}')`,
+    })),
+  };
+  STATE.screen = 'event';
+  persist();
+  render();
+}
+
+function chooseAgentInitial(agentId) {
+  STATE.player.agent = agentId;
+  addLog(`🤝 Novo empresário: ${AGENTS[agentId].name}.`);
+  presentInitialOffers();
+}
+
+function presentInitialOffers() {
+  const p = STATE.player;
+  if (!p.agent) { presentAgentChoice(); return; }
+  const agent = AGENTS[p.agent];
+  const strong = overallRating(p) >= 58;
+  const offers = [buildOfferCard(1, agent, 'titular'), buildOfferCard(1, agent, 'rotação')];
+  if (strong || chance(0.25)) offers.push(buildOfferCard(2, agent, 'reserva'));
+
+  STATE.pendingOffers = {
+    title: 'Propostas Profissionais',
+    intro: 'Seus primeiros contratos como profissional chegaram. Escolha onde vai começar sua carreira.',
+    offers, allowStay: false, onAcceptPrefix: 'signInitialOfferByIndex',
+  };
+  STATE.screen = 'offers';
+  persist();
+  render();
+}
+
+function signInitialOfferByIndex(i) {
+  const offer = STATE.pendingOffers.offers[i];
+  const p = STATE.player;
+  p.club = { name: offer.club, tier: offer.tier, country: offer.country };
+  p.contract = { salary: offer.salary, seasonsLeft: offer.years, role: offer.role, bonusGol: Math.round(offer.salary * 0.12 / 100) * 100, signingBonus: offer.signingBonus, objectives: offer.objectives };
+  p.money += offer.signingBonus;
+  p.history.push({ name: offer.club, tier: offer.tier, phase: 'pro' });
+  p.stats.clubsCount++;
+  addLog(`✍️ Contrato assinado com ${offer.club} (Série ${offer.division})! ${fmtMoney(offer.salary)}/mês + luva de ${fmtMoney(offer.signingBonus)}.`);
+  STATE.pendingOffers = null;
+  STATE.screen = 'hub';
+  persist();
+  render();
+}
+
+/* =========================== 11. FASE: PROFISSIONAL =========================== */
+
+function computeSquadStatus(p) {
+  const score = p.morale + (overallRating(p) - 55) * 0.4;
+  if (score >= 58) return 'titular';
+  if (score >= 28) return 'reserva';
+  return 'fora';
+}
+
+function applyAutomaticTraining(p) {
+  const focus = p.trainingFocus && ATTR_KEYS.includes(p.trainingFocus) ? p.trainingFocus : pickDefaultFocus(p);
+  p.trainingFocus = focus;
+  const mult = clamp(1 + personalityFx('trainingMult') - p.fatigue / 140, 0.4, 1.9);
+
+  const curFocus = p.attrs[focus];
+  const dimFocus = clamp(1.15 - curFocus / 105, 0.12, 1);
+  const gainFocus = Math.max(0, Math.round(rand(2, 3) * mult * dimFocus));
+  if (gainFocus > 0) growAttr(p, focus, gainFocus);
+
+  const others = [];
+  ATTR_KEYS.forEach(k => {
+    if (k === focus) return;
+    if (chance(0.32)) {
+      const cur = p.attrs[k];
+      const dim = clamp(1.1 - cur / 110, 0.08, 1);
+      const g = Math.max(0, Math.round(rand(0, 1) * mult * dim));
+      if (g > 0) { growAttr(p, k, g); others.push(k); }
+    }
+  });
+
+  p.fatigue = clamp(p.fatigue + rand(5, 10), 0, 100);
+  if (p.fatigue >= 90 && chance(0.05)) triggerInjury('sobrecarga de jogos e treinos');
+  return { focus, gainFocus, others };
+}
+
+function proWeekAction() {
+  const p = STATE.player;
+  if (p.injury) return;
+  const trainResult = applyAutomaticTraining(p);
+  p.week++;
+  p.money += p.contract.salary;
+  if (p.flags.passiveIncome) p.money += p.flags.passiveIncome;
+  applyBillsAndUpkeep(p);
+  if (trainResult.gainFocus > 0) addLog(`💪 Foco em ${ATTR_LABELS[trainResult.focus]}: +${trainResult.gainFocus}. 💰 Salário: ${fmtMoney(p.contract.salary)}.`);
+  else addLog(`💰 Salário recebido: ${fmtMoney(p.contract.salary)}.`);
+  applyWeeklyPassives();
+
+  p.squadStatus = computeSquadStatus(p);
+  const seasonTurn = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
+  const isSeasonFinal = seasonTurn === CONFIG.TURNS_PER_SEASON;
+
+  if (p.squadStatus === 'fora') {
+    addLog('📋 Moral baixa pesou: você nem foi relacionado para este jogo.');
+    advanceFriendsRandom();
+    if (isSeasonFinal) { p.season++; p.age++; applyAgingEffects(); finishProSeason(); }
+    else { STATE.screen = 'hub'; }
+    persist(); render();
+    return;
+  }
+
+  const reduced = p.squadStatus === 'reserva';
+  const oppStrength = clamp(30 + p.club.tier * 10 + rand(-8, 10), 20, 96);
+
+  beginMatch({
+    opponentName: genClubName(p.club.tier), opponentStrength: oppStrength,
+    teamStrength: overallRating(p) + p.club.tier * 3 + rand(-4, 4) - (reduced ? 6 : 0),
+    importance: isSeasonFinal ? 'final' : (chance(0.3) ? 'marquee' : 'normal'),
+    onResolve: 'pro', context: { squadStatus: p.squadStatus },
+  });
+}
+
+function applyAgingEffects() {
+  const p = STATE.player;
+  if (p.age >= 31) {
+    ['velocidade', 'forca', 'resistencia'].forEach(k => { if (chance(0.35)) growAttr(p, k, -rand(1, 3)); });
+    addLog('🕰️ A idade começa a pesar um pouco no seu físico.');
+  }
+}
+
+function continuePro() {
+  const p = STATE.player;
+  const pm = STATE.pendingMatch;
+  const seasonTurn = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
+  const isSeasonEnd = seasonTurn === CONFIG.TURNS_PER_SEASON;
+  STATE.pendingMatch = null;
+
+  if (isSeasonEnd) {
+    p.season++;
+    p.age++;
+    applyAgingEffects();
+    finishProSeason();
+  } else if (!maybeQueuePostMatchEvent(pm)) {
+    STATE.screen = 'hub';
+  }
+  persist();
+  render();
+}
+
+function estimateMarketValue(p) {
+  const rating = overallRating(p);
+  const ageFactor = p.age <= 24 ? 1.2 : p.age <= 29 ? 1.0 : p.age <= 33 ? 0.7 : 0.4;
+  const tierFactor = p.club ? p.club.tier : 1;
+  return Math.round(rating * rating * tierFactor * ageFactor * 1600);
+}
+
+function buildProSeasonSummaryData() {
+  const p = STATE.player;
+  const ss = p.seasonStats;
+  const avgRating = ss.matches ? ss.ratingSum / ss.matches : 0;
+  const lines = [`Temporada encerrada — ${p.age} anos, ${p.club.name}.`, `${ss.matches} jogos · ${ss.goals} gols · ${ss.assists} assistências · nota média ${avgRating.toFixed(1)}.`];
+
+  const titleChance = clamp(0.14 + p.club.tier * 0.05 + (avgRating - 6) * 0.06, 0.03, 0.55);
+  if (chance(titleChance)) {
+    const pool = p.club.tier >= 5 ? TITLE_POOL_ELITE.concat(TITLE_POOL_DOMESTIC) : TITLE_POOL_DOMESTIC;
+    const t = pick(pool);
+    p.trophies.push({ name: t, season: p.season - 1, age: p.age, club: p.club.name });
+    p.stats.titles++;
+    lines.push(`🏆 Campeão: ${t}!`);
+  }
+
+  if (avgRating >= 7.6 && chance(0.3)) {
+    let award;
+    if (ss.goals >= 14 && chance(0.5)) award = 'Artilheiro do Campeonato';
+    else if (p.age <= 21) award = 'Revelação do Ano';
+    else if (avgRating >= 8.3) award = 'Craque da Temporada';
+    else award = pick(AWARD_POOL);
+    p.awardsLog.push({ name: award, season: p.season - 1, age: p.age });
+    p.reputation += 25;
+    lines.push(`🥇 Prêmio individual: ${award}!`);
+  }
+
+  p.stats.maxValue = Math.max(p.stats.maxValue, estimateMarketValue(p));
+  p.seasonStats = { matches: 0, goals: 0, assists: 0, ratingSum: 0, wins: 0, draws: 0, losses: 0 };
+  return lines;
+}
+
+function finishProSeason() {
+  const lines = buildProSeasonSummaryData();
+  STATE.pendingSummary = { title: 'Fim de Temporada', stamp: 'PROFISSIONAL', lines, kind: 'pro-end' };
+  STATE.screen = 'summary';
+}
+
+/* =========================== 12. EVENTOS PARALELOS =========================== */
+
+function returnToHub() { STATE.pendingEvent = null; STATE.screen = 'hub'; persist(); render(); }
+function openView(panel) { STATE.viewPanel = panel; STATE.screen = 'view'; render(); }
+function closeView() { STATE.viewPanel = null; STATE.screen = 'hub'; render(); }
+
+function spendMoney(kind) {
+  const p = STATE.player;
+  if (kind === 'familia') {
+    const cost = Math.min(p.money, 5000 + rand(0, 5000));
+    p.money -= cost;
+    p.morale = clamp(p.morale + 8, 0, 100);
+    p.followers += rand(50, 200);
+    addLog(`❤️ Você ajudou sua família (${fmtMoney(cost)}). A torcida percebe.`);
+  } else if (kind === 'treino') {
+    const cost = 8000 + rand(0, 4000);
+    if (p.money < cost) addLog('💸 Você não tem dinheiro suficiente pra isso agora.');
+    else { p.money -= cost; const k = pick(POSITIONS[p.position].primary); growAttr(p, k, rand(2, 4)); addLog(`🏋️ Treinamento particular pago: ${ATTR_LABELS[k]} evolui.`); }
+  }
+  returnToHub();
+}
+
+function advanceFriendsRandom() {
+  const p = STATE.player;
+  p.friends.forEach(f => {
+    if (f.path === 'abandonou' || f.path === 'profissional_destaque') return;
+    if (f.closeness == null) f.closeness = 60;
+    const drift = clamp(0.025 - (f.closeness - 50) / 4000, 0.008, 0.05);
+    if (chance(drift)) {
+      const abandonChance = clamp(0.3 - f.closeness / 300, 0.05, 0.4);
+      if (chance(abandonChance)) { f.path = 'abandonou'; addLog(`📰 Seu amigo ${f.name} pendurou as chuteiras e seguiu outro caminho.`); }
+      else {
+        const idx = FRIEND_PATH_ORDER.indexOf(f.path);
+        if (idx < FRIEND_PATH_ORDER.length - 1) { f.path = FRIEND_PATH_ORDER[idx + 1]; addLog(`📰 Notícia do bairro: ${f.name} ${FRIEND_PATH_LABEL[f.path]}!`); }
+      }
+    }
+    f.closeness = clamp(f.closeness - 0.15, 0, 100);
+  });
+}
+
+const FRIEND_ACTIVITY_TEXT = {
+  festa: ['Vocês foram numa festa e relembraram os tempos de bairro.', 'A festa foi até tarde — muita risada e história repetida.'],
+  pelada: ['Rolou uma pelada no campinho, do jeito que era antes.', 'Vocês dividiram os times como na infância.'],
+  papo: ['Vocês bateram um papo tranquilo, colocando a conversa em dia.', 'Foi só sentar e conversar — sem pressa nenhuma.'],
+  jogo: ['Seu amigo foi ver você jogar de camisa e tudo.', 'Ele gravou tudo pra mostrar pra galera do bairro.'],
+  ligar: ['Você ligou só pra saber como ele está.', 'Uma ligação rápida, mas que faz diferença.'],
+};
+
+function openFriendInteract(idx) {
+  const p = STATE.player;
+  const f = p.friends[idx];
+  if (!f) { STATE.screen = 'hub'; render(); return; }
+  const choices = [
+    { label: '🎉 Ir a uma festa', sub: 'Sobe a moral, mas cansa um pouco', onclick: `friendAction(${idx},'festa')` },
+    { label: '⚽ Jogar uma pelada', sub: 'De graça — e pode render um treino extra', onclick: `friendAction(${idx},'pelada')` },
+    { label: '💬 Bater um papo', sub: 'Rápido e fortalece o vínculo', onclick: `friendAction(${idx},'papo')` },
+    { label: '🎁 Ajudar financeiramente', sub: 'Custa dinheiro, mas pode mudar a vida dele', onclick: `friendAction(${idx},'ajudar')` },
+  ];
+  if (p.phase === 'pro') choices.push({ label: '🏟️ Levar pro seu jogo', sub: 'Ele te vê brilhar de perto', onclick: `friendAction(${idx},'jogo')` });
+  choices.push({ label: '📞 Ligar pra saber como está', sub: 'Simples, mas mantém o vínculo', onclick: `friendAction(${idx},'ligar')` });
+  choices.push({ label: 'Voltar', onclick: 'closeView()' });
+
+  STATE.pendingEvent = {
+    title: f.name, stamp: 'AMIGOS',
+    body: [`${f.roleLabel[0].toUpperCase() + f.roleLabel.slice(1)} · ${FRIEND_PATH_LABEL[f.path]}`, `Vínculo: ${Math.round(f.closeness)}/100`],
+    choices,
+    data: { friendIdx: idx },
+  };
+  STATE.screen = 'event';
+  persist(); render();
+}
+
+function friendAction(idx, kind) {
+  const p = STATE.player;
+  const f = p.friends[idx];
+  if (!f) { returnToHub(); return; }
+  if (f.closeness == null) f.closeness = 60;
+
+  if (kind === 'festa') {
+    p.morale = clamp(p.morale + rand(6, 12), 0, 100);
+    p.fatigue = clamp(p.fatigue + rand(6, 12), 0, 100);
+    f.closeness = clamp(f.closeness + rand(6, 12), 0, 100);
+    addLog(`🎉 ${pick(FRIEND_ACTIVITY_TEXT.festa)}`);
+    if (p.phase === 'pro' && chance(0.1)) {
+      p.reputation = Math.max(0, p.reputation - rand(3, 8));
+      addLog('📸 Fotos da festa viralizaram e renderam uma pequena polêmica.');
+    }
+  } else if (kind === 'pelada') {
+    p.morale = clamp(p.morale + rand(4, 9), 0, 100);
+    f.closeness = clamp(f.closeness + rand(5, 10), 0, 100);
+    addLog(`⚽ ${pick(FRIEND_ACTIVITY_TEXT.pelada)}`);
+    if (chance(0.3)) {
+      const k = pick(POSITIONS[p.position].primary);
+      growAttr(p, k, 1);
+      addLog(`Sem nem perceber, ${ATTR_LABELS[k]} evoluiu um pouco jogando por diversão.`);
+    }
+  } else if (kind === 'papo') {
+    p.morale = clamp(p.morale + rand(3, 6), 0, 100);
+    f.closeness = clamp(f.closeness + rand(8, 14), 0, 100);
+    addLog(`💬 ${pick(FRIEND_ACTIVITY_TEXT.papo)}`);
+  } else if (kind === 'ajudar') {
+    const cost = Math.min(p.money, rand(2000, 8000));
+    if (cost < 500) {
+      addLog('💸 Você não tem dinheiro sobrando pra ajudar agora.');
+    } else {
+      p.money -= cost;
+      p.morale = clamp(p.morale + rand(5, 10), 0, 100);
+      f.closeness = clamp(f.closeness + rand(15, 25), 0, 100);
+      if (f.path === 'amador' && chance(0.3)) { f.path = 'base'; addLog(`🎁 Com sua ajuda, ${f.name} conseguiu uma chance na base de um clube!`); }
+      else addLog(`🎁 Você ajudou ${f.name} com ${fmtMoney(cost)}. Ele não vai esquecer isso.`);
+    }
+  } else if (kind === 'jogo') {
+    p.morale = clamp(p.morale + rand(4, 8), 0, 100);
+    f.closeness = clamp(f.closeness + rand(8, 14), 0, 100);
+    p.followers += rand(20, 80);
+    addLog(`🏟️ ${pick(FRIEND_ACTIVITY_TEXT.jogo)}`);
+  } else if (kind === 'ligar') {
+    p.morale = clamp(p.morale + rand(1, 3), 0, 100);
+    f.closeness = clamp(f.closeness + rand(3, 6), 0, 100);
+    addLog(`📞 ${pick(FRIEND_ACTIVITY_TEXT.ligar)}`);
+  }
+  returnToHub();
+}
+
+function queueInjuryEvent() {
+  const inj = STATE.player.injury;
+  STATE.pendingEvent = {
+    title: 'Departamento Médico', stamp: 'LESÃO',
+    body: [`Diagnóstico: ${inj.name}.`, `"Você precisa ficar cerca de ${inj.turnsLeft} semana(s) fora." — diz o médico.`],
+    choices: [
+      { label: 'Respeitar o tratamento', onclick: "injuryChoice('respeitar')" },
+      { label: 'Tentar voltar antes do prazo', onclick: "injuryChoice('antecipar')" },
+    ],
+  };
+  STATE.screen = 'event';
+}
+
+function injuryChoice(choice) {
+  const p = STATE.player;
+  if (choice === 'respeitar') addLog('🩺 Você segue o tratamento à risca.');
+  else {
+    p.injury.turnsLeft = Math.max(1, Math.ceil(p.injury.turnsLeft / 2));
+    p.injury.triedEarly = true;
+    if (chance(0.35)) { p.injury.turnsLeft += rand(2, 5); p.morale = clamp(p.morale - 10, 0, 100); addLog('⚠️ Você voltou cedo demais e a lesão piorou.'); }
+    else addLog('💪 Você antecipa a volta e escapa ileso — por pouco.');
+  }
+  returnToHub();
+}
+
+function injuryWeekTick() {
+  const p = STATE.player;
+  p.injury.turnsLeft--;
+  p.fatigue = clamp(p.fatigue - 20, 0, 100);
+  p.morale = clamp(p.morale + 3, 0, 100);
+  if (p.phase === 'pro' && p.contract) p.money += p.contract.salary;
+  if (p.injury.turnsLeft <= 0) { addLog('✅ Recuperado! De volta aos gramados.'); p.injury = null; }
+  else addLog(`🩹 Fisioterapia — faltam ${p.injury.turnsLeft} semana(s).`);
+  persist();
+  render();
+}
+
+const INTERVIEW_QUESTIONS = [
+  { q: 'Você acha que merece ser titular?', opts: [
+    { label: '"Estou trabalhando para conquistar meu espaço."', rep: 4, morale: 2 },
+    { label: '"Com certeza, sou melhor que o titular."', rep: 6, morale: 4 },
+    { label: '"Isso é decisão do treinador."', rep: 2, morale: 0 },
+  ]},
+  { q: 'Como você avalia sua atuação hoje?', opts: [
+    { label: '"O mérito é do time todo."', rep: 3, morale: 1 },
+    { label: '"Sabia que ia decidir o jogo."', rep: 5, morale: 3 },
+    { label: '"Dá pra melhorar bastante ainda."', rep: 2, morale: -1 },
+  ]},
+  { q: 'Quais são seus próximos objetivos na carreira?', opts: [
+    { label: '"Quero ajudar meu time a ser campeão."', rep: 3, morale: 2 },
+    { label: '"Quero jogar pela Seleção."', rep: 5, morale: 3 },
+    { label: '"Prefiro não falar sobre isso agora."', rep: 1, morale: 0 },
+  ]},
+];
+
+function queueInterviewEvent() {
+  const chosen = pick(INTERVIEW_QUESTIONS);
+  STATE.pendingEvent = {
+    title: 'Entrevista pós-jogo', stamp: 'MÍDIA',
+    body: ['Um repórter pergunta:', `"${chosen.q}"`],
+    choices: chosen.opts.map((o, i) => ({ label: o.label, onclick: `resolveInterviewByIndex(${i})` })),
+    data: { opts: chosen.opts },
+  };
+  STATE.screen = 'event';
+}
+
+function resolveInterviewByIndex(i) {
+  const o = STATE.pendingEvent.data.opts[i];
+  const p = STATE.player;
+  p.reputation += Math.round(o.rep * (1 + personalityFx('mediaMult')));
+  p.morale = clamp(p.morale + o.morale, 0, 100);
+  addLog('🎤 Entrevista concedida.');
+  returnToHub();
+}
+
+function queueSocialPostEvent() {
+  const p = STATE.player;
+  STATE.pendingEvent = {
+    title: 'Rede Social', stamp: 'MÍDIA',
+    body: [`Você tem ${p.followers.toLocaleString('pt-BR')} seguidores.`, 'Vale postar alguma coisa depois do jogo?'],
+    choices: [
+      { label: 'Post motivacional', onclick: "resolveSocialPost('motivacional')" },
+      { label: 'Post descontraído', onclick: "resolveSocialPost('descontraido')" },
+      { label: 'Provocar o adversário', onclick: "resolveSocialPost('provocativo')" },
+      { label: 'Não postar', onclick: 'returnToHub()' },
+    ],
+  };
+  STATE.screen = 'event';
+}
+
+function resolveSocialPost(tone) {
+  const p = STATE.player;
+  let followerGain, scandalChance, text;
+  if (tone === 'motivacional') { text = 'Post motivacional bem recebido pelos fãs.'; followerGain = rand(40, 120); scandalChance = 0.02; }
+  else if (tone === 'descontraido') { text = 'Post descontraído viraliza um pouco.'; followerGain = rand(60, 180); scandalChance = 0.05; }
+  else { text = 'A provocação repercute — parte torce, parte critica.'; followerGain = rand(100, 300); scandalChance = 0.22; }
+
+  scandalChance = clamp(scandalChance + personalityFx('scandalMult') * 0.1, 0.01, 0.6);
+  followerGain = Math.round(followerGain * (1 + p.reputation / 2000));
+  p.followers += followerGain;
+
+  if (chance(scandalChance)) {
+    p.reputation = Math.max(0, p.reputation - rand(8, 20));
+    p.morale = clamp(p.morale - rand(3, 8), 0, 100);
+    addLog(`📱 ${text} Mas gerou polêmica — parte da torcida critica a postura.`);
+  } else {
+    p.morale = clamp(p.morale + rand(1, 4), 0, 100);
+    addLog(`📱 ${text} (+${followerGain} seguidores)`);
+  }
+  returnToHub();
+}
+
+function maybeQueuePostMatchEvent(pm) {
+  const p = STATE.player;
+  advanceFriendsRandom();
+  if (pm.gotInjured) { queueInjuryEvent(); return true; }
+  if (p.phase !== 'bairro' && pm.rating >= 7 && chance(p.phase === 'pro' ? 0.3 : 0.18)) { queueInterviewEvent(); return true; }
+  if (p.phase === 'pro' && chance(0.16)) { queueSocialPostEvent(); return true; }
+  if (p.romance.partner) {
+    if (p.romance.partner.happiness < 20 && chance(0.12)) { queueRelationshipCrisisEvent(); return true; }
+    if (p.romance.status === 'namorando' && p.romance.partner.happiness >= 75 && (p.age - p.romance.partner.since) >= 1 && chance(0.05)) { queueProposalEvent(); return true; }
+    if (p.romance.status === 'noivo' && chance(0.06)) { queueWeddingEvent(); return true; }
+  }
+  return false;
+}
+
+/* ---- sequência pós-temporada: seleção / transferência / contrato / raízes / aposentadoria ---- */
+
+function afterSummaryContinue() {
+  const s = STATE.pendingSummary;
+  STATE.pendingSummary = null;
+  if (!s) { STATE.screen = 'hub'; persist(); render(); return; }
+  if (s.kind === 'base-end') {
+    if (s.proceed) prepareProTransition(); else { STATE.screen = 'hub'; persist(); render(); }
+    return;
+  }
+  if (s.kind === 'pro-end') {
+    STATE.postSeasonQueue = ['national', 'transfer', 'contract', 'homecoming', 'retirement'];
+    runNextPostSeasonStep();
+    return;
+  }
+  STATE.screen = 'hub'; persist(); render();
+}
+
+function runNextPostSeasonStep() {
+  if (!STATE.postSeasonQueue || STATE.postSeasonQueue.length === 0) { STATE.screen = 'hub'; persist(); render(); return; }
+  const step = STATE.postSeasonQueue.shift();
+  if (step === 'national') return stepNationalCheck();
+  if (step === 'transfer') return stepTransferCheck();
+  if (step === 'contract') return stepContractCheck();
+  if (step === 'homecoming') return stepHomecomingCheck();
+  if (step === 'retirement') return stepRetirementCheck();
+  runNextPostSeasonStep();
+}
+
+function stepNationalCheck() {
+  const p = STATE.player;
+  const nt = p.nationalTeam;
+  let called = false;
+  if (nt.level === 0 && p.reputation >= 110 && p.age <= 20) { nt.level = 1; called = true; }
+  else if (nt.level === 1 && p.reputation >= 260 && p.age <= 23) { nt.level = 2; called = true; }
+  else if (nt.level <= 2 && p.reputation >= 480) { nt.level = 3; called = true; }
+  else if (nt.level === 3 && chance(p.reputation >= 800 ? 0.7 : 0.4)) called = true;
+
+  if (!called) { runNextPostSeasonStep(); return; }
+  const label = nt.level === 1 ? 'Sub-20' : nt.level === 2 ? 'Sub-23' : 'Principal';
+  STATE.pendingEvent = {
+    title: 'Convocação!', stamp: 'SELEÇÃO',
+    body: ['"Você foi convocado para representar seu país." 🇧🇷', `Seleção Brasileira ${label} — sua janela de jogos começa agora.`],
+    choices: [{ label: 'Disputar a janela', onclick: `playNationalWindow('${label}')` }],
+  };
+  STATE.screen = 'event';
+  persist();
+  render();
+}
+
+function playNationalWindow(label) {
+  STATE.nationalWindow = { left: 2, label };
+  STATE.pendingEvent = null;
+  playNextNationalMatch();
+}
+
+function playNextNationalMatch() {
+  const p = STATE.player;
+  const oppStrength = clamp(70 + rand(-10, 20), 55, 99);
+  beginMatch({
+    opponentName: `Seleção de ${pick(TRANSFER_COUNTRIES)}`, opponentStrength: oppStrength,
+    teamStrength: clamp(overallRating(p) + 15 + rand(-5, 5), 40, 99),
+    importance: p.stats.caps === 0 ? 'debut' : 'marquee', onResolve: 'national',
+  });
+}
+
+function continueNational() {
+  const p = STATE.player;
+  const pm = STATE.pendingMatch;
+  p.stats.caps++;
+  p.nationalTeam.caps++;
+  p.nationalTeam.goals += pm.playerGoals;
+  p.stats.natGoals += pm.playerGoals;
+  STATE.pendingMatch = null;
+  STATE.nationalWindow.left--;
+  persist();
+  if (STATE.nationalWindow.left > 0) { playNextNationalMatch(); return; }
+  addLog(`🇧🇷 Fim da janela da Seleção (${STATE.nationalWindow.label}).`);
+  STATE.nationalWindow = null;
+  runNextPostSeasonStep();
+}
+
+function stepTransferCheck() {
+  const p = STATE.player;
+  const moraleFactor = clamp(0.45 + p.morale / 100, 0.45, 1.45);
+  const offerChance = clamp((0.12 + (repLevelIndex(p.reputation) - 1) * 0.09 + (p.contract.seasonsLeft <= 1 ? 0.2 : 0)) * moraleFactor, 0.03, 0.8);
+  if (!chance(offerChance)) { runNextPostSeasonStep(); return; }
+
+  const agent = AGENTS[p.agent];
+  const lvl = repLevelIndex(p.reputation);
+  const tierCap = p.morale < 40 ? clamp(lvl, 1, 5) : clamp(lvl + 1, 1, 6);
+  const tierFloor = clamp(p.club.tier, 1, 6);
+  const numOffers = clamp(2 + Math.floor(lvl / 3), 2, 4);
+  const offers = [];
+  for (let i = 0; i < numOffers; i++) {
+    const t = clamp(tierFloor + rand(0, 2), 1, tierCap);
+    offers.push(buildOfferCard(t, agent, chance(0.5) ? 'titular' : 'rotação'));
+  }
+
+  STATE.pendingOffers = {
+    title: offers.length > 1 ? 'Propostas de Transferência' : 'Proposta de Transferência',
+    intro: `Você recebeu ${offers.length} proposta${offers.length > 1 ? 's' : ''} pelo seu passe. Compare os clubes e decida seu futuro.`,
+    offers, allowStay: true, currentClub: p.club.name,
+    onAcceptPrefix: 'acceptTransferOfferByIndex',
+  };
+  STATE.screen = 'offers';
+  persist();
+  render();
+}
+
+function acceptTransferOfferByIndex(i) { acceptTransferOffer(STATE.pendingOffers.offers[i]); }
+
+function acceptTransferOffer(offer) {
+  const p = STATE.player;
+  addLog(`🌎 Transferência! De ${p.club.name} para ${offer.club} (${offer.country}).`);
+  p.club = { name: offer.club, tier: offer.tier, country: offer.country };
+  p.history.push({ name: offer.club, tier: offer.tier, phase: 'pro' });
+  p.stats.clubsCount++;
+  p.contract = { salary: offer.salary, seasonsLeft: offer.years, role: offer.role, bonusGol: Math.round(offer.salary * 0.12 / 100) * 100, signingBonus: offer.signingBonus, objectives: offer.objectives };
+  p.money += offer.signingBonus;
+  STATE.pendingOffers = null;
+  runNextPostSeasonStep();
+}
+
+function declineTransferOffer() { STATE.pendingOffers = null; runNextPostSeasonStep(); }
+
+function stepContractCheck() {
+  const p = STATE.player;
+  p.contract.seasonsLeft--;
+  if (p.contract.seasonsLeft > 0) { runNextPostSeasonStep(); return; }
+
+  const newSalary = Math.round(p.contract.salary * clamp(1 + p.reputation / 700, 1.05, 2) / 100) * 100;
+  STATE.pendingEvent = {
+    title: 'Fim de Contrato', stamp: 'CONTRATO',
+    body: [`Seu vínculo com o ${p.club.name} chega ao fim.`],
+    choices: [
+      { label: `Renovar por ${fmtMoney(newSalary)}/mês`, sub: '3 anos', onclick: `renewContract(${newSalary},3)` },
+      { label: 'Trocar de empresário e negociar', onclick: 'promptAgentSwitch()' },
+    ],
+  };
+  STATE.screen = 'event';
+  persist();
+  render();
+}
+
+function renewContract(salary, years) {
+  STATE.player.contract = { salary, seasonsLeft: years, role: 'titular', bonusGol: Math.round(salary * 0.15 / 100) * 100 };
+  addLog(`✍️ Contrato renovado: ${fmtMoney(salary)}/mês por ${years} anos.`);
+  runNextPostSeasonStep();
+}
+
+function promptAgentSwitch() {
+  const p = STATE.player;
+  const choices = Object.values(AGENTS).filter(a => a.id !== p.agent).map(a => ({ label: a.name, sub: a.desc, onclick: `switchAgentAndRenew('${a.id}')` }));
+  choices.push({ label: 'Manter empresário atual e renovar', onclick: `renewContract(${Math.round(p.contract.salary * 1.15 / 100) * 100},3)` });
+  STATE.pendingEvent = { title: 'Trocar de Empresário', stamp: 'CONTRATO', body: ['Romper com o empresário atual pode gerar desgaste, mas pode abrir novas portas.'], choices };
+  STATE.screen = 'event';
+  persist();
+  render();
+}
+
+function switchAgentAndRenew(agentId) {
+  const p = STATE.player;
+  p.agent = agentId;
+  addLog(`🤝 Novo empresário: ${AGENTS[agentId].name}.`);
+  renewContract(Math.round(p.contract.salary * 1.1 / 100) * 100, 3);
+}
+
+function stepHomecomingCheck() {
+  const p = STATE.player;
+  if (!p.flags.wentHome && repLevelIndex(p.reputation) >= 5) {
+    p.flags.wentHome = true;
+    STATE.pendingEvent = {
+      title: 'O Retorno ao Bairro', stamp: 'RAÍZES',
+      body: ['Anos depois, você volta ao campo de terra onde tudo começou.', 'Tem gente nova jogando ali — do jeito que você jogava.', 'Seu antigo treinador aparece pra te ver.'],
+      choices: [
+        { label: 'Organizar uma partida beneficente', onclick: "homecomingChoice('partida')" },
+        { label: 'Reformar o campo do bairro', onclick: "homecomingChoice('reforma')" },
+      ],
+    };
+    STATE.screen = 'event';
+    persist();
+    render();
+    return;
+  }
+  runNextPostSeasonStep();
+}
+
+function homecomingChoice(kind) {
+  const p = STATE.player;
+  if (kind === 'partida') {
+    p.morale = clamp(p.morale + 15, 0, 100);
+    p.followers += rand(500, 2000);
+    addLog('🏠 A partida beneficente emociona o bairro inteiro.');
+  } else {
+    p.money -= Math.max(0, Math.min(p.money * 0.1, 50000));
+    p.reputation += 30;
+    addLog('🏠 O campinho de terra agora tem grama e arquibancada — com seu nome no muro.');
+  }
+  runNextPostSeasonStep();
+}
+
+function stepRetirementCheck() {
+  const p = STATE.player;
+  if (p.age >= CONFIG.FORCE_RETIRE_AGE) { startRetirement(true); return; }
+  if (p.age >= CONFIG.RETIRE_MIN_AGE) {
+    STATE.pendingEvent = {
+      title: 'Encruzilhada da Carreira', stamp: 'CARREIRA',
+      body: [`Você tem ${p.age} anos.`, p.age >= 34 ? 'O corpo já não responde como antes, mas a decisão é sua.' : 'Ainda dá pra render bastante — mas alguns preferem parar no topo.'],
+      choices: [
+        { label: 'Continuar jogando', onclick: 'runNextPostSeasonStep()' },
+        { label: 'Encerrar a carreira', onclick: 'startRetirement(false)' },
+      ],
+    };
+    STATE.screen = 'event';
+    persist();
+    render();
+    return;
+  }
+  runNextPostSeasonStep();
+}
+
+/* =========================== 13. APOSENTADORIA / LEGADO =========================== */
+
+function startRetirement(forced) {
+  const p = STATE.player;
+  STATE.pendingEvent = {
+    title: forced ? 'Hora de Pendurar as Chuteiras' : 'Encerrar a Carreira', stamp: 'APOSENTADORIA',
+    body: [forced ? `Aos ${p.age} anos, o corpo já pediu passagem.` : `Você decide encerrar a carreira aos ${p.age} anos, por escolha própria.`, 'O que vem depois de campo?'],
+    choices: [
+      { label: 'Virar treinador', onclick: "finalizeRetirement('Treinador')" },
+      { label: 'Virar empresário de jogadores', onclick: "finalizeRetirement('Empresário')" },
+      { label: 'Abrir uma escolinha de futebol', onclick: "finalizeRetirement('Dono de escolinha')" },
+      { label: 'Investir e virar dirigente', onclick: "finalizeRetirement('Investidor e dirigente')" },
+      { label: 'Virar comentarista esportivo', onclick: "finalizeRetirement('Comentarista')" },
+      { label: 'Se afastar do futebol', onclick: "finalizeRetirement('Longe dos gramados')" },
+    ],
+  };
+  STATE.screen = 'event';
+  persist();
+  render();
+}
+
+function finalizeRetirement(path) {
+  const p = STATE.player;
+  p.phase = 'retired';
+  p.flags.postCareer = path;
+  addLog(`👑 Carreira encerrada. Novo capítulo: ${path}.`);
+  buildLegacy();
+}
+
+function buildLegacy() {
+  const p = STATE.player;
+  const lvl = repLevelIndex(p.reputation);
+  STATE.pendingLegacy = {
+    name: p.name, nickname: p.nickname, position: POSITIONS[p.position].name,
+    matches: p.stats.matches, goals: p.stats.goals, assists: p.stats.assists,
+    titles: p.stats.titles, caps: p.stats.caps, natGoals: p.stats.natGoals,
+    clubs: p.stats.clubsCount, maxValue: p.stats.maxValue,
+    trophies: p.trophies, awards: p.awardsLog,
+    statusName: REP_LEVELS[lvl - 1].name, postCareer: p.flags.postCareer, age: p.age,
+  };
+  STATE.screen = 'legacy';
+  persist();
+  render();
+}
+
+function startOverFromLegacy() {
+  wipeSave();
+  STATE = freshState();
+  render();
+}
+
+/* =========================== 12b. CELULAR: BANCO / INVESTIMENTOS =========================== */
+
+function applyWeeklyPassives() {
+  const p = STATE.player;
+  applyInvestmentGrowth(p);
+  if (p.romance.partner) {
+    p.romance.partner.happiness = clamp(p.romance.partner.happiness - randf(0.3, 0.8), 0, 100);
+  }
+}
+
+function applyBillsAndUpkeep(p) {
+  let total = 0;
+  (p.vehicles || []).forEach(v => { total += v.upkeep || 0; });
+  (p.properties || []).forEach(pr => { total += pr.upkeep || 0; });
+  if (total > 0) {
+    p.money -= total;
+    if (p.money < -15000) p.morale = clamp(p.morale - 2, 0, 100);
+  }
+}
+
+const VEHICLE_CATALOG = [
+  { id: 'popular', name: 'Carro popular', price: 45000, upkeep: 250 },
+  { id: 'sedan', name: 'Sedã executivo', price: 120000, upkeep: 600 },
+  { id: 'suv', name: 'SUV de luxo', price: 320000, upkeep: 1400 },
+  { id: 'esportivo', name: 'Esportivo importado', price: 850000, upkeep: 3500 },
+  { id: 'superesportivo', name: 'Superesportivo', price: 2200000, upkeep: 9000 },
+];
+const PROPERTY_CATALOG = [
+  { id: 'apto', name: 'Apartamento simples', price: 180000, upkeep: 400 },
+  { id: 'casa', name: 'Casa em condomínio', price: 650000, upkeep: 1200 },
+  { id: 'cobertura', name: 'Cobertura na cidade', price: 1800000, upkeep: 3200 },
+  { id: 'mansao', name: 'Mansão com campo particular', price: 6000000, upkeep: 9500 },
+];
+
+function cantAfford() { addLog('💸 Saldo insuficiente para essa compra.'); returnToHub(); }
+
+function openVehicleMenu() {
+  const p = STATE.player;
+  const choices = VEHICLE_CATALOG.map(v => ({
+    label: `🚗 ${v.name}`, sub: `${fmtMoney(v.price)} · manutenção ${fmtMoney(v.upkeep)}/semana`,
+    onclick: p.money >= v.price ? `buyVehicle('${v.id}')` : 'cantAfford()',
+  }));
+  choices.push({ label: 'Voltar', onclick: 'openBanco()' });
+  STATE.pendingEvent = {
+    title: '🚗 Concessionária', stamp: 'DINHEIRO',
+    body: [`Saldo: ${fmtMoney(p.money)}.`, p.vehicles.length ? `Garagem: ${p.vehicles.map(v => v.name).join(', ')}.` : 'Sua garagem está vazia.'],
+    choices,
+  };
+  STATE.screen = 'event'; persist(); render();
+}
+
+function buyVehicle(id) {
+  const p = STATE.player;
+  const v = VEHICLE_CATALOG.find(x => x.id === id);
+  if (!v || p.money < v.price) { cantAfford(); return; }
+  p.money -= v.price;
+  p.vehicles.push({ id: v.id + '-' + Date.now(), name: v.name, upkeep: v.upkeep });
+  p.morale = clamp(p.morale + 4, 0, 100);
+  addLog(`🚗 Você comprou um(a) ${v.name}!`);
+  returnToHub();
+}
+
+function openPropertyMenu() {
+  const p = STATE.player;
+  const choices = PROPERTY_CATALOG.map(pr => ({
+    label: `🏠 ${pr.name}`, sub: `${fmtMoney(pr.price)} · manutenção ${fmtMoney(pr.upkeep)}/semana`,
+    onclick: p.money >= pr.price ? `buyProperty('${pr.id}')` : 'cantAfford()',
+  }));
+  choices.push({ label: 'Voltar', onclick: 'openBanco()' });
+  STATE.pendingEvent = {
+    title: '🏠 Imobiliária', stamp: 'DINHEIRO',
+    body: [`Saldo: ${fmtMoney(p.money)}.`, p.properties.length ? `Imóveis: ${p.properties.map(pr => pr.name).join(', ')}.` : 'Você ainda mora de aluguel.'],
+    choices,
+  };
+  STATE.screen = 'event'; persist(); render();
+}
+
+function buyProperty(id) {
+  const p = STATE.player;
+  const pr = PROPERTY_CATALOG.find(x => x.id === id);
+  if (!pr || p.money < pr.price) { cantAfford(); return; }
+  p.money -= pr.price;
+  p.properties.push({ id: pr.id + '-' + Date.now(), name: pr.name, upkeep: pr.upkeep });
+  p.morale = clamp(p.morale + 6, 0, 100);
+  addLog(`🏠 Você comprou: ${pr.name}!`);
+  returnToHub();
+}
+
+function viewAssetsPanel() {
+  const p = STATE.player;
+  const totalUpkeep = [...(p.vehicles || []), ...(p.properties || [])].reduce((s, x) => s + (x.upkeep || 0), 0);
+  const vRows = (p.vehicles || []).map(v => `<div class="news-item">🚗 ${escapeHtml(v.name)} <span class="invest-detail">— ${fmtMoney(v.upkeep)}/semana</span></div>`).join('');
+  const pRows = (p.properties || []).map(pr => `<div class="news-item">🏠 ${escapeHtml(pr.name)} <span class="invest-detail">— ${fmtMoney(pr.upkeep)}/semana</span></div>`).join('');
+  return `<div class="card"><div class="card-title">📄 Meus Bens e Contas</div>
+    ${vRows || '<div class="news-item muted">Nenhum veículo.</div>'}
+    ${pRows || '<div class="news-item muted">Nenhum imóvel.</div>'}
+    <p class="hint-text">Total em manutenção: ${fmtMoney(totalUpkeep)}/semana, descontado automaticamente do seu salário.</p>
+  </div>`;
+}
+
+function pickN(arr, n) {
+  const copy = arr.slice();
+  const out = [];
+  for (let i = 0; i < n && copy.length; i++) {
+    const idx = rand(0, copy.length - 1);
+    out.push(copy[idx]);
+    copy.splice(idx, 1);
+  }
+  return out;
+}
+
+const ROMANCE_STATUS_LABEL = { solteiro: 'Solteiro(a)', namorando: 'Namorando', noivo: 'Noivo(a)', casado: 'Casado(a)' };
+function relationshipStatusLabel(s) { return ROMANCE_STATUS_LABEL[s] || s; }
+
+function openTrainingMenu() {
+  const p = STATE.player;
+  const focus = p.trainingFocus || pickDefaultFocus(p);
+  const groupIcon = { tec: '⚙️', fis: '💪', men: '🧠' };
+  const choices = [];
+  ['tec', 'fis', 'men'].forEach(g => {
+    ATTR_KEYS.filter(k => ATTR_GROUP[k] === g).forEach(k => {
+      choices.push({
+        label: `${groupIcon[g]} ${ATTR_LABELS[k]}${k === focus ? ' ✓' : ''}`,
+        sub: `${GROUP_LABELS[g]} · atual: ${p.attrs[k]}`,
+        onclick: `setTrainingFocus('${k}')`,
+      });
+    });
+  });
+  choices.push({ label: 'Fechar', onclick: 'returnToHub()' });
+  STATE.pendingEvent = {
+    title: '🏋️ Treinamento', stamp: 'TREINO',
+    body: [`Foco atual: ${ATTR_LABELS[focus]}.`, 'Esse atributo evolui mais rápido toda semana. Os outros continuam melhorando devagar, sozinhos. Troque quando quiser.'],
+    choices,
+  };
+  STATE.screen = 'event';
+  persist(); render();
+}
+
+function setTrainingFocus(key) {
+  STATE.player.trainingFocus = key;
+  addLog(`🎯 Foco de treino ajustado para ${ATTR_LABELS[key]}.`);
+  returnToHub();
+}
+
+function openCelular() {
+  const p = STATE.player;
+  const choices = [{ label: '🏦 Banco', sub: `Saldo: ${fmtMoney(p.money)}`, onclick: 'openBanco()' }];
+  if (p.romance.status !== 'solteiro' && p.romance.partner) {
+    choices.push({ label: `💑 ${p.romance.partner.name}`, sub: relationshipStatusLabel(p.romance.status), onclick: 'openPartnerInteract()' });
+  } else if (p.age >= CONFIG.ROMANCE_MIN_AGE) {
+    choices.push({ label: '💘 Encontre seu Amor', sub: 'Conheça pessoas novas', onclick: 'openDatingApp()' });
+  } else {
+    choices.push({ label: '💘 Encontre seu Amor', sub: `Disponível a partir dos ${CONFIG.ROMANCE_MIN_AGE} anos`, onclick: 'returnToHub()' });
+  }
+  choices.push({ label: '🏠 Amigos', sub: 'Converse e combine algo com a galera', onclick: "openView('friends')" });
+  choices.push({ label: 'Fechar', onclick: 'returnToHub()' });
+  STATE.pendingEvent = { title: '📱 Celular', stamp: 'CELULAR', body: ['Seus aplicativos.'], choices };
+  STATE.screen = 'event';
+  persist(); render();
+}
+
+const INVESTMENT_TYPES = {
+  poupanca: { name: 'Poupança', risk: 'Baixo', desc: 'Rendimento pequeno, mas garantido.', meanReturn: 0.003, volatility: 0.001 },
+  imoveis:  { name: 'Fundo Imobiliário', risk: 'Médio', desc: 'Renda estável a longo prazo.', meanReturn: 0.009, volatility: 0.010 },
+  acoes:    { name: 'Ações', risk: 'Alto', desc: 'Pode disparar ou despencar de uma vez.', meanReturn: 0.018, volatility: 0.060 },
+  negocio:  { name: 'Negócio Próprio', risk: 'Médio-Alto', desc: 'Um restaurante ou academia com seu nome.', meanReturn: 0.013, volatility: 0.030 },
+  cripto:   { name: 'Criptomoedas', risk: 'Muito Alto', desc: 'Ganhos explosivos, riscos enormes.', meanReturn: 0.030, volatility: 0.160 },
+};
+
+function openBanco() {
+  const p = STATE.player;
+  const portfolioValue = p.investments.reduce((s, i) => s + i.value, 0);
+  const totalUpkeep = [...(p.vehicles || []), ...(p.properties || [])].reduce((s, x) => s + (x.upkeep || 0), 0);
+  STATE.pendingEvent = {
+    title: '🏦 Banco', stamp: 'DINHEIRO',
+    body: [`Saldo em conta: ${fmtMoney(p.money)}.`, portfolioValue > 0 ? `Carteira de investimentos: ${fmtMoney(Math.round(portfolioValue))}.` : 'Você ainda não tem investimentos.', totalUpkeep > 0 ? `Contas fixas: ${fmtMoney(totalUpkeep)}/semana.` : ''],
+    choices: [
+      { label: '📈 Investimentos', sub: 'Escolha onde aplicar seu dinheiro', onclick: 'openInvestMenu()' },
+      { label: '🚗 Concessionária', sub: 'Compre um carro', onclick: 'openVehicleMenu()' },
+      { label: '🏠 Imobiliária', sub: 'Compre uma casa ou apartamento', onclick: 'openPropertyMenu()' },
+      { label: '📄 Meus bens e contas', sub: 'Veja tudo que você tem e paga', onclick: "openView('assets')" },
+      { label: '❤️ Ajudar a família', sub: 'Moral e reputação com a torcida', onclick: "spendMoney('familia')" },
+      { label: '🏋️ Treinamento particular', sub: 'Impulso extra num atributo forte', onclick: "spendMoney('treino')" },
+      { label: 'Voltar', onclick: 'openCelular()' },
+    ],
+  };
+  STATE.screen = 'event';
+  persist(); render();
+}
+
+function openInvestMenu() {
+  const p = STATE.player;
+  const choices = Object.keys(INVESTMENT_TYPES).map(key => {
+    const t = INVESTMENT_TYPES[key];
+    return { label: t.name, sub: `Risco ${t.risk} · ${t.desc}`, onclick: `chooseInvestType('${key}')` };
+  });
+  if (p.investments.length) choices.push({ label: '💼 Ver minha carteira', onclick: "openView('portfolio')" });
+  choices.push({ label: 'Voltar', onclick: 'openBanco()' });
+  STATE.pendingEvent = { title: '📈 Investimentos', stamp: 'DINHEIRO', body: [`Saldo disponível: ${fmtMoney(p.money)}.`], choices };
+  STATE.screen = 'event';
+  persist(); render();
+}
+
+function chooseInvestType(key) {
+  const p = STATE.player;
+  const t = INVESTMENT_TYPES[key];
+  const labels = ['10% do saldo', '25% do saldo', '50% do saldo', 'Tudo'];
+  const raw = [0.10, 0.25, 0.50, 1.0].map(pct => Math.round(p.money * pct / 100) * 100);
+  const seen = new Set();
+  const choices = [];
+  raw.forEach((amount, i) => {
+    if (amount >= 100 && !seen.has(amount)) { seen.add(amount); choices.push({ label: labels[i], sub: fmtMoney(amount), onclick: `investAmount('${key}',${amount})` }); }
+  });
+  choices.push({ label: 'Voltar', onclick: 'openInvestMenu()' });
+  STATE.pendingEvent = {
+    title: t.name, stamp: 'DINHEIRO',
+    body: [t.desc, `Risco: ${t.risk} · Saldo disponível: ${fmtMoney(p.money)}.`, choices.length === 1 ? 'Você não tem saldo suficiente pra investir agora.' : ''],
+    choices,
+  };
+  STATE.screen = 'event';
+  persist(); render();
+}
+
+function investAmount(key, amount) {
+  const p = STATE.player;
+  const t = INVESTMENT_TYPES[key];
+  amount = Math.min(amount, p.money);
+  if (amount < 100) { addLog('💸 Valor pequeno demais pra investir.'); returnToHub(); return; }
+  p.money -= amount;
+  p.investments.push({ id: 'inv' + Date.now() + '-' + rand(100, 999), type: key, typeName: t.name, amount, value: amount, startAge: p.age });
+  addLog(`📈 Você investiu ${fmtMoney(amount)} em ${t.name}.`);
+  returnToHub();
+}
+
+function cashOutInvestment(id) {
+  const p = STATE.player;
+  const idx = p.investments.findIndex(i => i.id === id);
+  if (idx < 0) { closeView(); return; }
+  const inv = p.investments[idx];
+  const val = Math.round(inv.value);
+  p.money += val;
+  const gain = val - inv.amount;
+  addLog(`💼 Você resgatou ${inv.typeName}: ${fmtMoney(val)} (${gain >= 0 ? '+' : ''}${fmtMoney(gain)}).`);
+  p.investments.splice(idx, 1);
+  persist();
+  closeView();
+}
+
+function applyInvestmentGrowth(p) {
+  p.investments.forEach(inv => {
+    const t = INVESTMENT_TYPES[inv.type];
+    if (!t) return;
+    const change = t.meanReturn + (Math.random() * 2 - 1) * t.volatility;
+    inv.value = Math.max(0, inv.value * (1 + change));
+  });
+}
+
+/* =========================== 12c. CELULAR: ENCONTRE SEU AMOR =========================== */
+
+const FEMALE_QUALITIES = [
+  'Adora praia e surfe', 'Estudante de Medicina', 'Fã de música sertaneja', 'Corre maratonas nos fins de semana',
+  'Trabalha com moda', 'Ama viajar pelo Brasil', 'Toca violão nas horas vagas', 'Vegetariana convicta',
+  'Apaixonada por cinema', 'Estuda Direito', 'Adora cozinhar', 'Fã de rock nacional',
+  'Trabalha com design', 'Ama animais e tem três cachorros', 'Estuda Arquitetura', 'Curte jogos de video game',
+  'Adora dançar forró', 'Fã de futebol e não perde um jogo', 'Estuda Psicologia', 'Ama fotografia',
+  'Trabalha em marketing digital', 'Curte trilhas e natureza', 'Fã de séries e maratona tudo', 'Estuda Nutrição',
+];
+
+function openDatingApp() { generateDatingCandidate(); }
+
+function generateDatingCandidate() {
+  STATE.datingCandidate = { name: randomName('f'), age: rand(18, 30), qualities: pickN(FEMALE_QUALITIES, 2) };
+  STATE.screen = 'dating';
+  persist(); render();
+}
+
+function swipeChoice(dir) {
+  const p = STATE.player;
+  const cand = STATE.datingCandidate;
+  if (!cand) { returnToHub(); return; }
+  if (dir === 'quero' && chance(0.6)) {
+    p.romance = { status: 'namorando', partner: { name: cand.name, age: cand.age, quality: cand.qualities[0], happiness: 70, since: p.age } };
+    addLog(`💘 Deu match com ${cand.name}! Vocês começaram a namorar.`);
+    p.morale = clamp(p.morale + 12, 0, 100);
+    STATE.datingCandidate = null;
+    returnToHub();
+    return;
+  }
+  if (dir === 'quero') addLog(`💔 Você deu like em ${cand.name}, mas não rolou match.`);
+  generateDatingCandidate();
+}
+
+function closeDatingApp() { STATE.datingCandidate = null; returnToHub(); }
+
+/* =========================== 12d. RELACIONAMENTO =========================== */
+
+function openPartnerInteract() {
+  const p = STATE.player;
+  const partner = p.romance.partner;
+  if (!partner) { openCelular(); return; }
+  const choices = [
+    { label: '🍽️ Sair para jantar', sub: 'Custa dinheiro, mas sobe bastante a felicidade', onclick: "partnerAction('jantar')" },
+    { label: '🌅 Passar o dia juntos', sub: 'De graça — momento de qualidade', onclick: "partnerAction('dia')" },
+    { label: '🎁 Dar um presente', sub: 'Custa dinheiro, felicidade garantida', onclick: "partnerAction('presente')" },
+    { label: '💬 Conversar sobre a carreira', sub: 'Ela te apoia nos seus planos', onclick: "partnerAction('conversar')" },
+  ];
+  if (p.romance.status === 'namorando') choices.push({ label: '💍 Pedir em noivado', onclick: 'proposeMarriage()' });
+  if (p.romance.status === 'noivo') choices.push({ label: '💒 Marcar o casamento', onclick: 'finalizeWedding()' });
+  choices.push({ label: '💔 Terminar o relacionamento', onclick: "partnerAction('terminar')" });
+  choices.push({ label: 'Voltar', onclick: 'openCelular()' });
+
+  STATE.pendingEvent = {
+    title: `💑 ${partner.name}`, stamp: 'AMOR',
+    body: [`${relationshipStatusLabel(p.romance.status)} · ${partner.quality}`, `Felicidade: ${Math.round(partner.happiness)}/100`],
+    choices,
+  };
+  STATE.screen = 'event';
+  persist(); render();
+}
+
+function partnerAction(kind) {
+  const p = STATE.player;
+  const partner = p.romance.partner;
+  if (!partner) { returnToHub(); return; }
+  if (kind === 'jantar') {
+    const cost = Math.min(p.money, rand(150, 500));
+    p.money -= cost;
+    partner.happiness = clamp(partner.happiness + rand(12, 20), 0, 100);
+    p.morale = clamp(p.morale + rand(4, 8), 0, 100);
+    addLog(`🍽️ Jantar romântico com ${partner.name} (${fmtMoney(cost)}).`);
+  } else if (kind === 'dia') {
+    partner.happiness = clamp(partner.happiness + rand(8, 14), 0, 100);
+    p.morale = clamp(p.morale + rand(3, 7), 0, 100);
+    addLog('🌅 Vocês passaram o dia juntos, sem pressa.');
+  } else if (kind === 'presente') {
+    const cost = Math.min(p.money, rand(300, 1500));
+    p.money -= cost;
+    partner.happiness = clamp(partner.happiness + rand(15, 25), 0, 100);
+    addLog(`🎁 Você deu um presente especial pra ${partner.name} (${fmtMoney(cost)}).`);
+  } else if (kind === 'conversar') {
+    partner.happiness = clamp(partner.happiness + rand(5, 10), 0, 100);
+    p.morale = clamp(p.morale + rand(2, 5), 0, 100);
+    addLog('💬 Vocês conversaram sobre seus planos de carreira.');
+  } else if (kind === 'terminar') {
+    addLog(`💔 Você terminou com ${partner.name}.`);
+    p.morale = clamp(p.morale - rand(6, 14), 0, 100);
+    p.romance = { status: 'solteiro', partner: null };
+    returnToHub();
+    return;
+  }
+  returnToHub();
+}
+
+function queueRelationshipCrisisEvent() {
+  const partner = STATE.player.romance.partner;
+  STATE.pendingEvent = {
+    title: 'Crise no Relacionamento', stamp: 'AMOR',
+    body: [`${partner.name} sente que vocês andam distantes.`, '"A gente precisa conversar..."'],
+    choices: [
+      { label: 'Priorizar o relacionamento', sub: 'Sobe bastante a felicidade dela', onclick: "resolveCrisis('priorizar')" },
+      { label: 'Pedir mais um tempo', sub: 'Arriscado', onclick: "resolveCrisis('pedirTempo')" },
+      { label: 'Terminar o relacionamento', onclick: "resolveCrisis('terminar')" },
+    ],
+  };
+  STATE.screen = 'event';
+}
+
+function resolveCrisis(choice) {
+  const p = STATE.player;
+  const partner = p.romance.partner;
+  if (choice === 'priorizar') {
+    partner.happiness = clamp(partner.happiness + rand(20, 32), 0, 100);
+    p.fatigue = clamp(p.fatigue + rand(3, 8), 0, 100);
+    addLog(`❤️ Vocês conversaram e resolveram as coisas. ${partner.name} está mais tranquila.`);
+  } else if (choice === 'pedirTempo') {
+    if (chance(0.5)) { partner.happiness = clamp(partner.happiness + rand(3, 8), 0, 100); addLog(`${partner.name} entendeu — por enquanto.`); }
+    else { partner.happiness = clamp(partner.happiness - rand(10, 18), 0, 100); addLog(`${partner.name} ficou ainda mais magoada.`); }
+  } else {
+    addLog(`💔 Você e ${partner.name} terminaram o relacionamento.`);
+    p.morale = clamp(p.morale - rand(8, 16), 0, 100);
+    p.romance = { status: 'solteiro', partner: null };
+  }
+  returnToHub();
+}
+
+function queueProposalEvent() {
+  const partner = STATE.player.romance.partner;
+  STATE.pendingEvent = {
+    title: 'Hora de Pensar no Futuro', stamp: 'AMOR',
+    body: [`Vocês estão firmes há um tempo, e ${partner.name} é parte importante da sua vida.`, 'Talvez seja hora de dar um passo maior.'],
+    choices: [
+      { label: '💍 Pedir em noivado', onclick: 'proposeMarriage()' },
+      { label: 'Ainda não é a hora', onclick: 'returnToHub()' },
+    ],
+  };
+  STATE.screen = 'event';
+}
+
+function proposeMarriage() {
+  const p = STATE.player;
+  p.romance.status = 'noivo';
+  p.romance.partner.happiness = clamp(p.romance.partner.happiness + 20, 0, 100);
+  p.morale = clamp(p.morale + 15, 0, 100);
+  addLog(`💍 Pedido de noivado aceito! Você e ${p.romance.partner.name} estão noivos.`);
+  returnToHub();
+}
+
+function queueWeddingEvent() {
+  const partner = STATE.player.romance.partner;
+  STATE.pendingEvent = {
+    title: 'O Grande Dia', stamp: 'AMOR',
+    body: [`Chegou o dia do casamento com ${partner.name}.`, 'Amigos, família e companheiros de time estão lá para celebrar.'],
+    choices: [{ label: 'Celebrar', onclick: 'finalizeWedding()' }],
+  };
+  STATE.screen = 'event';
+}
+
+function finalizeWedding() {
+  const p = STATE.player;
+  p.romance.status = 'casado';
+  p.romance.partner.happiness = clamp(p.romance.partner.happiness + 20, 0, 100);
+  p.morale = clamp(p.morale + 18, 0, 100);
+  if (p.phase === 'pro') { p.followers += rand(300, 1200); p.reputation += 8; }
+  addLog(`💒 Você se casou com ${p.romance.partner.name}! Um novo capítulo começa.`);
+  returnToHub();
+}
+
+/* =========================== 14. RENDERIZAÇÃO =========================== */
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+function slug(s) { return String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, '-'); }
+function fmtMoneyShort(euros) {
+  euros = euros || 0;
+  if (euros >= 1000000) return '€' + (euros / 1000000).toFixed(1).replace('.', ',') + 'mi';
+  if (euros >= 1000) return '€' + Math.round(euros / 1000) + 'mil';
+  return '€' + Math.round(euros);
+}
+
+function render() {
+  const root = document.getElementById('root');
+  if (!root) return;
+  let html;
+  switch (STATE.screen) {
+    case 'create': html = renderCreate(); break;
+    case 'hub': html = renderHub(); break;
+    case 'view': html = renderView(); break;
+    case 'offers': html = renderOffers(); break;
+    case 'match-moment': html = renderMatchMoment(); break;
+    case 'penalty': html = renderPenalty(); break;
+    case 'dating': html = renderDatingApp(); break;
+    case 'match-result': html = renderMatchResult(); break;
+    case 'event': html = renderEvent(); break;
+    case 'summary': html = renderSummary(); break;
+    case 'legacy': html = renderLegacy(); break;
+    case 'menu': default: html = renderMenu(); break;
+  }
+  root.innerHTML = html;
+  root.scrollTop = 0;
+}
+
+function renderShell(inner) {
+  const p = STATE.player;
+  if (!p) return `<div class="screen screen-bare">${inner}</div>`;
+  return `<div class="screen"><div class="scoreboard">${renderStatusBar()}</div><div class="screen-body">${inner}</div></div>`;
+}
+
+function repProgressPct(points) {
+  const lvl = repLevelIndex(points);
+  const cur = REP_LEVELS[lvl - 1].min;
+  const next = REP_LEVELS[lvl] ? REP_LEVELS[lvl].min : cur + 600;
+  return clamp(((points - cur) / (next - cur)) * 100, 4, 100);
+}
+
+function renderStatusBar() {
+  const p = STATE.player;
+  const pos = POSITIONS[p.position];
+  const lvl = repLevelIndex(p.reputation);
+  const phaseLabel = { bairro: 'BAIRRO', base: 'BASE', pro: 'PROFISSIONAL', retired: 'LENDA' }[p.phase] || '';
+  return `
+    <div class="sb-top">
+      <div class="sb-num">${p.number}</div>
+      <div class="sb-id">
+        <div class="sb-name">${escapeHtml(p.nickname || p.name)}</div>
+        <div class="sb-meta">${pos.short} · ${p.age} anos${p.club ? ' · ' + escapeHtml(p.club.name) : ''}</div>
+      </div>
+      <div class="sb-avatar">${p.avatar}</div>
+    </div>
+    ${phaseLabel ? `<div class="sb-stamp stamp-${slug(phaseLabel)}">${phaseLabel}</div>` : ''}
+    <div class="sb-meters">
+      <div class="meter"><span>Fadiga</span><div class="bar"><div class="bar-fill fill-fadiga" style="width:${p.fatigue}%"></div></div></div>
+      <div class="meter"><span>Moral</span><div class="bar"><div class="bar-fill fill-moral" style="width:${p.morale}%"></div></div></div>
+      <div class="meter"><span>${REP_LEVELS[lvl - 1].name}</span><div class="bar"><div class="bar-fill fill-rep" style="width:${repProgressPct(p.reputation)}%"></div></div></div>
+    </div>
+  `;
+}
+
+function renderMenu() {
+  return `
+    <div class="menu-screen">
+      <div class="menu-hero">
+        <div class="menu-ball">⚽</div>
+        <h1 class="title-display">DO TERRÃO<br>AO PROFISSIONAL</h1>
+        <p class="menu-tag">"Você começa com uma bola, um campo de terra e um sonho. O resto depende de você."</p>
+      </div>
+      <button class="btn btn-gold btn-lg btn-block" onclick="newGameStart()">Nova Carreira</button>
+    </div>
+  `;
+}
+
+/* ---- criação de personagem ---- */
+
+function renderCreate() {
+  const step = STATE.createStep;
+  const inner = step === 1 ? createStep1() : step === 2 ? createStep2() : step === 3 ? createStep3() : createStep4();
+  return `
+    <div class="create-screen">
+      <div class="create-progress">${[1, 2, 3, 4].map(i => `<div class="prog-dot ${i <= step ? 'active' : ''}"></div>`).join('')}</div>
+      ${inner}
+    </div>
+  `;
+}
+
+function createStep1() {
+  const d = STATE.createData;
+  return `
+    <h2 class="create-title">Quem é você?</h2>
+    <p class="create-sub">Todo mundo começa em algum lugar. O seu é um campo de terra no bairro.</p>
+    <label class="field-label">Nome</label>
+    <input class="text-input" type="text" maxlength="24" value="${escapeHtml(d.name)}" oninput="STATE.createData.name=this.value" placeholder="Seu nome completo">
+    <label class="field-label">Apelido <span class="opt">(opcional)</span></label>
+    <input class="text-input" type="text" maxlength="16" value="${escapeHtml(d.nickname)}" oninput="STATE.createData.nickname=this.value" placeholder="Como a torcida vai te chamar">
+    <label class="field-label">Idade: <strong id="age-label">${d.age} anos</strong></label>
+    <input class="range-input" type="range" min="13" max="16" value="${d.age}" oninput="STATE.createData.age=parseInt(this.value,10); document.getElementById('age-label').textContent=this.value+' anos';">
+    <div class="create-nav">
+      <button class="btn btn-ghost" onclick="createPrevStep()">Cancelar</button>
+      <button class="btn btn-primary" onclick="createNextStep()">Próximo</button>
+    </div>
+  `;
+}
+
+function createStep2() {
+  const d = STATE.createData;
+  const posButtons = Object.keys(POSITIONS).map(key => {
+    const pos = POSITIONS[key];
+    return `<button class="pos-card ${d.position === key ? 'selected' : ''}" onclick="selectPosition('${key}')"><span class="pos-emoji">${pos.emoji}</span><span class="pos-name">${pos.name}</span><span class="pos-short">${pos.short}</span></button>`;
+  }).join('');
+  return `
+    <h2 class="create-title">Sua posição em campo</h2>
+    <p class="create-sub">Isso define seus pontos fortes de saída.</p>
+    <div class="pos-grid">${posButtons}</div>
+    <label class="field-label">Número da camisa</label>
+    <div class="number-row">
+      <button class="btn btn-chip" onclick="bumpNumber(-1)">−</button>
+      <div class="number-display" id="num-display">${d.number}</div>
+      <button class="btn btn-chip" onclick="bumpNumber(1)">+</button>
+    </div>
+    <div class="create-nav">
+      <button class="btn btn-ghost" onclick="createPrevStep()">Voltar</button>
+      <button class="btn btn-primary" onclick="createNextStep()">Próximo</button>
+    </div>
+  `;
+}
+
+function createStep3() {
+  const d = STATE.createData;
+  const footButtons = FEET.map(f => `<button class="chip-btn ${d.foot === f ? 'selected' : ''}" onclick="selectFoot('${f}')">${f}</button>`).join('');
+  const avatarButtons = AVATARS.map(a => `<button class="avatar-btn ${d.avatar === a ? 'selected' : ''}" onclick="selectAvatar('${a}')">${a}</button>`).join('');
+  return `
+    <h2 class="create-title">Seu jeito de jogar</h2>
+    <label class="field-label">Pé dominante</label>
+    <div class="chip-row">${footButtons}</div>
+    <label class="field-label">Visual</label>
+    <div class="avatar-grid">${avatarButtons}</div>
+    <div class="create-nav">
+      <button class="btn btn-ghost" onclick="createPrevStep()">Voltar</button>
+      <button class="btn btn-primary" onclick="createNextStep()">Próximo</button>
+    </div>
+  `;
+}
+
+function createStep4() {
+  const d = STATE.createData;
+  const styleCards = Object.keys(STYLES).map(key => {
+    const s = STYLES[key];
+    return `<button class="pick-card ${d.style === key ? 'selected' : ''}" onclick="selectStyle('${key}')"><div class="pick-name">${s.name}</div><div class="pick-desc">${s.desc}</div></button>`;
+  }).join('');
+  const persCards = Object.keys(PERSONALITIES).map(key => {
+    const pr = PERSONALITIES[key];
+    return `<button class="pick-card ${d.personality === key ? 'selected' : ''}" onclick="selectPersonality('${key}')"><div class="pick-name">${pr.name}</div><div class="pick-desc">${pr.desc}</div></button>`;
+  }).join('');
+  return `
+    <h2 class="create-title">Estilo e personalidade</h2>
+    <label class="field-label">Estilo de jogo</label>
+    <div class="pick-list">${styleCards}</div>
+    <label class="field-label">Personalidade</label>
+    <div class="pick-list">${persCards}</div>
+    <div class="create-nav">
+      <button class="btn btn-ghost" onclick="createPrevStep()">Voltar</button>
+      <button class="btn btn-gold" onclick="finalizeCreation()">Entrar em campo ⚽</button>
+    </div>
+  `;
+}
+
+function selectPosition(key) { STATE.createData.position = key; STATE.createData.number = POSITIONS[key].numberSuggest; render(); }
+function bumpNumber(delta) {
+  STATE.createData.number = clamp(STATE.createData.number + delta, 1, 99);
+  const el = document.getElementById('num-display'); if (el) el.textContent = STATE.createData.number;
+}
+function selectFoot(f) { STATE.createData.foot = f; render(); }
+function selectAvatar(a) { STATE.createData.avatar = a; render(); }
+function selectStyle(k) { STATE.createData.style = k; render(); }
+function selectPersonality(k) { STATE.createData.personality = k; render(); }
+
+/* ---- hub ---- */
+
+const SQUAD_STATUS_LABEL = { titular: 'Titular', reserva: 'Reserva', fora: 'Fora do grupo' };
+
+function renderPhaseHeader() {
+  const p = STATE.player;
+  if (!p.club) return '';
+  const t = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
+  const status = p.squadStatus || 'titular';
+  return `<div class="phase-head"><h2>${escapeHtml(p.club.name)}</h2><p>Temporada ${p.season} · Rodada ${t} de ${CONFIG.TURNS_PER_SEASON} · ${p.club.country} <span class="squad-badge status-${status}">${SQUAD_STATUS_LABEL[status]}</span></p></div>`;
+}
+
+function renderNewsFeed() {
+  const p = STATE.player;
+  const items = p.log.slice(0, 8).map(l => `<div class="news-item">${escapeHtml(l)}</div>`).join('');
+  return `<div class="card card-news"><div class="card-title">📰 Últimas notícias</div>${items || '<div class="news-item muted">Nada por aqui ainda.</div>'}</div>`;
+}
+
+const HUB_SHORTCUTS = [
+  { icon: '👤', label: 'Meu jogador', fn: "openView('player')" },
+  { icon: '💈', label: 'Barbeiro', fn: 'openBarbershop()' },
+  { icon: '📅', label: 'Calendário', fn: "openView('calendar')" },
+  { icon: '📈', label: 'Desempenho', fn: "openView('performance')" },
+  { icon: '🏆', label: 'Classificação', fn: "openView('standings')" },
+  { icon: '🏦', label: 'Banco', fn: 'openBanco()' },
+  { icon: '📱', label: 'Celular', fn: 'openCelular()' },
+  { icon: '🔄', label: 'Transferências', fn: "openView('interest')" },
+  { icon: '🏋️', label: 'Treinamento', fn: 'openTrainingMenu()' },
+  { icon: '📊', label: 'Atributos', fn: "openView('attrs')" },
+  { icon: '⭐', label: 'Evolução', fn: "openView('evolution')" },
+  { icon: '🎯', label: 'Metas', fn: "openView('goals')" },
+  { icon: '🩺', label: 'DM', fn: "openView('medical')" },
+  { icon: '🛡️', label: 'Meu contrato', fn: "openView('contract')" },
+  { icon: '📖', label: 'Minha carreira', fn: "openView('career')" },
+];
+
+function renderHub() {
+  const p = STATE.player;
+  if (p.injury) return renderShell(renderInjuryHub());
+  if (!p.club) return renderShell('<div class="card"><p>Carregando propostas...</p></div>');
+
+  const focus = p.trainingFocus || pickDefaultFocus(p);
+  if (!p.nextOpponentPreview) p.nextOpponentPreview = genClubName(p.club.tier);
+  const nextOpp = p.nextOpponentPreview;
+  const t = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
+  const status = p.squadStatus || 'titular';
+
+  const shortcutBtns = HUB_SHORTCUTS.map(s => `<button class="shortcut-btn" onclick="${s.fn}"><span class="shortcut-icon">${s.icon}</span><span class="shortcut-label">${s.label}</span></button>`).join('');
+
+  const inner = `
+    ${STATE.saveFlash ? '<div class="save-toast">💾 Jogo salvo — pode fechar e continuar depois.</div>' : ''}
+    <div class="card next-match-card">
+      <div class="card-title">PRÓXIMO JOGO</div>
+      <div class="next-match-row">
+        ${crestImg(p.club.name, 42)}
+        <span class="next-match-vs">×</span>
+        ${crestImg(nextOpp, 42)}
+      </div>
+      <div class="next-match-names"><span>${escapeHtml(p.club.name)}</span><span>${escapeHtml(nextOpp)}</span></div>
+      <div class="next-match-meta">Rodada ${t} de ${CONFIG.TURNS_PER_SEASON} · Temporada ${p.season} · <span class="squad-badge status-${status}">${SQUAD_STATUS_LABEL[status]}</span></div>
+      <button class="btn btn-gold btn-block" onclick="proWeekAction()">▶️ Avançar até o jogo</button>
+    </div>
+    <div class="card">
+      <div class="card-title">CONDIÇÃO</div>
+      <div class="meter-row"><span>Fadiga</span><div class="bar"><div class="bar-fill fill-fadiga" style="width:${p.fatigue}%"></div></div><b>${p.fatigue}%</b></div>
+      <div class="meter-row"><span>Moral</span><div class="bar"><div class="bar-fill fill-moral" style="width:${p.morale}%"></div></div><b>${p.morale}%</b></div>
+      <div class="meter-row"><span>Foco: ${ATTR_LABELS[focus]}</span><div class="bar"><div class="bar-fill fill-tec" style="width:${p.attrs[focus]}%"></div></div><b>${p.attrs[focus]}</b></div>
+    </div>
+    <div class="shortcuts-grid">${shortcutBtns}</div>
+    <button class="btn btn-outline btn-block" style="margin-bottom:14px" onclick="manualSave()">💾 Salvar Jogo</button>
+    ${renderNewsFeed()}
+  `;
+  return renderShell(inner);
+}
+
+function renderInjuryHub() {
+  const p = STATE.player;
+  const inj = p.injury;
+  const pct = clamp(100 - (inj.turnsLeft / inj.totalTurns) * 100, 0, 100);
+  return `
+    ${renderPhaseHeader()}
+    <div class="card card-injury">
+      <div class="card-title">🩺 Departamento Médico</div>
+      <p>${escapeHtml(inj.name)} — faltam <strong>${inj.turnsLeft}</strong> semana(s).</p>
+      <div class="bar"><div class="bar-fill fill-fadiga" style="width:${pct}%"></div></div>
+      <button class="btn btn-primary btn-block" onclick="injuryWeekTick()">Continuar tratamento</button>
+    </div>
+    ${renderNewsFeed()}
+  `;
+}
+
+/* ---- painéis ---- */
+
+function renderView() {
+  const panel = STATE.viewPanel;
+  const panelMap = {
+    attrs: viewAttrsPanel, friends: viewFriendsPanel, rival: viewRivalPanel, career: viewCareerPanel,
+    portfolio: viewPortfolioPanel, assets: viewAssetsPanel, player: viewPlayerPanel, calendar: viewCalendarPanel,
+    performance: viewPerformancePanel, standings: viewStandingsPanel, interest: viewInterestPanel,
+    evolution: viewEvolutionPanel, goals: viewGoalsPanel, medical: viewMedicalPanel, contract: viewContractPanel,
+  };
+  const fn = panelMap[panel];
+  const inner = fn ? fn() : '<div class="card"><p>Painel não encontrado.</p></div>';
+  const backTarget = panel === 'portfolio' ? 'openInvestMenu()' : panel === 'assets' ? 'openBanco()' : 'closeView()';
+  return renderShell(`${inner}<button class="btn btn-ghost btn-block" onclick="${backTarget}">Voltar</button>`);
+}
+
+function viewPortfolioPanel() {
+  const p = STATE.player;
+  if (!p.investments.length) return `<div class="card"><div class="card-title">💼 Minha Carteira</div><p class="hint-text">Nenhum investimento ativo.</p></div>`;
+  const total = p.investments.reduce((s, i) => s + i.value, 0);
+  const rows = p.investments.map(inv => {
+    const gain = inv.value - inv.amount;
+    const pct = inv.amount > 0 ? (gain / inv.amount) * 100 : 0;
+    const cls = gain >= 0 ? 'gain-pos' : 'gain-neg';
+    return `<div class="invest-row">
+      <div class="invest-info">
+        <span class="invest-name">${escapeHtml(inv.typeName)}</span>
+        <span class="invest-detail">Aplicado ${fmtMoney(inv.amount)} · <span class="${cls}">${pct >= 0 ? '+' : ''}${pct.toFixed(1)}%</span></span>
+      </div>
+      <div class="invest-actions">
+        <span class="invest-value">${fmtMoney(Math.round(inv.value))}</span>
+        <button class="btn btn-chip btn-cashout" onclick="cashOutInvestment('${inv.id}')">Resgatar</button>
+      </div>
+    </div>`;
+  }).join('');
+  return `<div class="card"><div class="card-title">💼 Minha Carteira — Total ${fmtMoney(Math.round(total))}</div>${rows}</div>`;
+}
+
+function attrBar(key, val) {
+  return `<div class="attr-row"><span class="attr-name">${ATTR_LABELS[key]}</span><div class="bar"><div class="bar-fill fill-${ATTR_GROUP[key]}" style="width:${val}%"></div></div><span class="attr-val">${val}</span></div>`;
+}
+
+function viewAttrsPanel() {
+  const p = STATE.player;
+  const body = ['tec', 'fis', 'men'].map(g => {
+    const keys = ATTR_KEYS.filter(k => ATTR_GROUP[k] === g);
+    return `<div class="attr-group"><div class="attr-group-title">${GROUP_LABELS[g]}</div>${keys.map(k => attrBar(k, p.attrs[k])).join('')}</div>`;
+  }).join('');
+  return `<div class="card"><div class="card-title">📊 Atributos — Geral ${overallRating(p)}</div>${body}</div>`;
+}
+
+function viewFriendsPanel() {
+  const p = STATE.player;
+  const items = p.friends.map((f, i) => `
+    <button class="friend-row" onclick="openFriendInteract(${i})">
+      <span class="friend-name">${escapeHtml(f.name)} <em>(${f.roleLabel})</em></span>
+      <span class="friend-path">${FRIEND_PATH_LABEL[f.path]}</span>
+      <div class="bar friend-bar"><div class="bar-fill fill-moral" style="width:${Math.round(f.closeness == null ? 60 : f.closeness)}%"></div></div>
+    </button>`).join('');
+  return `<div class="card"><div class="card-title">🏠 Amigos do bairro</div><div class="friend-list">${items}</div><p class="hint-text">Toque em um amigo para interagir.</p></div>`;
+}
+
+function viewRivalPanel() {
+  const p = STATE.player;
+  if (!p.rival) return `<div class="card"><div class="card-title">🥊 Disputa por posição</div><p>Sem disputa direta no momento.</p></div>`;
+  const starting = isPlayerStarting();
+  return `<div class="card"><div class="card-title">🥊 Disputa por posição</div>
+    <p>Você está atualmente <strong>${starting ? 'na frente' : 'atrás'}</strong> na disputa contra <strong>${escapeHtml(p.rival.name)}</strong>.</p>
+    <div class="attr-row"><span class="attr-name">Você</span><div class="bar"><div class="bar-fill fill-men" style="width:${overallRating(p)}%"></div></div><span class="attr-val">${overallRating(p)}</span></div>
+    <div class="attr-row"><span class="attr-name">${escapeHtml(p.rival.name)}</span><div class="bar"><div class="bar-fill fill-tec" style="width:${p.rival.form}%"></div></div><span class="attr-val">${Math.round(p.rival.form)}</span></div>
+  </div>`;
+}
+
+function viewCareerPanel() {
+  const p = STATE.player;
+  const s = p.stats;
+  const trophyList = p.trophies.slice(-6).map(t => `<div class="news-item">🏆 ${t.name} (${t.age} anos)</div>`).join('') || '<div class="news-item muted">Ainda sem títulos.</div>';
+  return `<div class="card"><div class="card-title">🏆 Carreira</div>
+    <div class="stat-grid">
+      <div class="stat-box"><b>${s.matches}</b><span>Jogos</span></div>
+      <div class="stat-box"><b>${s.goals}</b><span>Gols</span></div>
+      <div class="stat-box"><b>${s.assists}</b><span>Assist.</span></div>
+      <div class="stat-box"><b>${s.titles}</b><span>Títulos</span></div>
+      <div class="stat-box"><b>${s.caps}</b><span>Seleção</span></div>
+      <div class="stat-box"><b>${fmtMoneyShort(p.stats.maxValue)}</b><span>Valor</span></div>
+    </div>
+    <div class="card-title" style="margin-top:12px">Últimos títulos</div>${trophyList}
+  </div>`;
+}
+
+/* ---- 👤 meu jogador ---- */
+
+function viewPlayerPanel() {
+  const p = STATE.player;
+  const pos = POSITIONS[p.position];
+  const hair = HAIRSTYLES[p.hairstyle] || HAIRSTYLES.padrao;
+  return `<div class="card player-card">
+    <div class="player-card-avatar">${p.avatar}<span class="player-hair-tag">${hair.icon}</span></div>
+    <div class="player-card-name">${escapeHtml(p.nickname || p.name)}</div>
+    <div class="player-card-meta">${pos.name} · ${p.age} anos · Pé ${p.foot}</div>
+    <div class="stat-grid" style="margin-top:14px">
+      <div class="stat-box"><b>${overallRating(p)}</b><span>Geral</span></div>
+      <div class="stat-box"><b>#${p.number}</b><span>Camisa</span></div>
+      <div class="stat-box"><b>${p.club ? CLUB_TIERS[p.club.tier].division : '—'}</b><span>Divisão</span></div>
+    </div>
+    <div class="attr-row" style="margin-top:14px"><span class="attr-name">Clube</span><span class="offer-line-val">${p.club ? escapeHtml(p.club.name) : '—'}</span></div>
+    <div class="attr-row"><span class="attr-name">Estilo</span><span class="offer-line-val">${STYLES[p.style].name}</span></div>
+    <div class="attr-row"><span class="attr-name">Personalidade</span><span class="offer-line-val">${PERSONALITIES[p.personality].name}</span></div>
+    <div class="attr-row"><span class="attr-name">Status</span><span class="offer-line-val">${REP_LEVELS[repLevelIndex(p.reputation) - 1].name}</span></div>
+  </div>`;
+}
+
+/* ---- 💈 barbeiro ---- */
+
+const HAIRSTYLES = {
+  padrao: { name: 'Padrão', icon: '💇' },
+  moicano: { name: 'Moicano', icon: '🎸' },
+  raspado: { name: 'Raspado na máquina', icon: '🪒' },
+  cacheado: { name: 'Cacheado', icon: '🌀' },
+  longo: { name: 'Cabelo longo', icon: '💫' },
+  colorido: { name: 'Colorido', icon: '🌈' },
+  tranca: { name: 'Tranças', icon: '🎀' },
+};
+
+function openBarbershop() {
+  const p = STATE.player;
+  const choices = Object.keys(HAIRSTYLES).map(k => ({
+    label: `${HAIRSTYLES[k].icon} ${HAIRSTYLES[k].name}${p.hairstyle === k ? ' ✓' : ''}`,
+    onclick: `setHairstyle('${k}')`,
+  }));
+  choices.push({ label: 'Fechar', onclick: 'returnToHub()' });
+  STATE.pendingEvent = { title: '💈 Barbeiro', stamp: 'CELULAR', body: ['Escolha seu novo corte de cabelo.'], choices };
+  STATE.screen = 'event';
+  persist(); render();
+}
+
+function setHairstyle(key) {
+  STATE.player.hairstyle = key;
+  addLog(`💈 Novo visual: ${HAIRSTYLES[key].name}.`);
+  returnToHub();
+}
+
+/* ---- 📅 calendário ---- */
+
+function viewCalendarPanel() {
+  const p = STATE.player;
+  const recent = p.ratingHistory.slice(-6).reverse();
+  const rows = recent.map(m => {
+    const resIcon = m.result === 'vitoria' ? '✅' : m.result === 'empate' ? '➖' : '❌';
+    return `<div class="cal-row"><span>${resIcon} vs ${escapeHtml(m.opponent)}</span><span>${m.myGoals} × ${m.oppGoals}</span></div>`;
+  }).join('') || '<div class="news-item muted">Nenhuma partida disputada ainda.</div>';
+  const nextOpp = p.nextOpponentPreview || (p.club ? genClubName(p.club.tier) : '—');
+  return `<div class="card"><div class="card-title">📅 Calendário</div>
+    <div class="cal-next"><span>Próximo jogo</span><b>${escapeHtml(nextOpp)}</b></div>
+    <div class="card-title" style="margin-top:14px">Últimos resultados</div>${rows}
+  </div>`;
+}
+
+/* ---- 📈 desempenho ---- */
+
+function viewPerformancePanel() {
+  const p = STATE.player;
+  const hist = p.ratingHistory;
+  const avg = hist.length ? (hist.reduce((s, m) => s + m.rating, 0) / hist.length).toFixed(2) : '—';
+  const rows = hist.slice(-14).reverse().map(m => `<div class="perf-row"><span>vs ${escapeHtml(m.opponent)}</span><b class="${m.rating >= 7 ? 'gain-pos' : m.rating < 5 ? 'gain-neg' : ''}">${m.rating.toFixed(1)}</b></div>`).join('') || '<div class="news-item muted">Sem partidas registradas.</div>';
+  return `<div class="card"><div class="card-title">📈 Desempenho — Média ${avg}</div>${rows}</div>`;
+}
+
+/* ---- 🏆 classificação ---- */
+
+function generateStandingsTable(p) {
+  const tierClubs = (BR_CLUBS_BY_TIER[p.club.tier] || []).filter(n => n !== p.club.name);
+  const rivals = pickN(tierClubs, Math.min(9, tierClubs.length));
+  const ss = p.seasonStats;
+  const myPts = (ss.wins || 0) * 3 + (ss.draws || 0);
+  const myPlayed = ss.matches || 0;
+  const table = [{ name: p.club.name, played: myPlayed, pts: myPts, isMe: true }];
+  rivals.forEach(name => {
+    const played = myPlayed;
+    const w = clamp(Math.round(played * randf(0.25, 0.6)), 0, played);
+    const d = clamp(Math.round((played - w) * randf(0.1, 0.5)), 0, played - w);
+    table.push({ name, played, pts: w * 3 + d, isMe: false });
+  });
+  table.sort((a, b) => b.pts - a.pts);
+  return table;
+}
+
+function viewStandingsPanel() {
+  const p = STATE.player;
+  const table = generateStandingsTable(p);
+  const rows = table.map((t, i) => `<div class="standing-row ${t.isMe ? 'standing-me' : ''}"><span class="standing-pos">${i + 1}º</span>${crestImg(t.name, 20)}<span class="standing-name">${escapeHtml(t.name)}</span><span class="standing-pts">${t.pts} pts</span></div>`).join('');
+  return `<div class="card"><div class="card-title">🏆 Classificação — Série ${CLUB_TIERS[p.club.tier].division}</div>${rows}<p class="hint-text">Tabela estimada a partir do seu desempenho na temporada.</p></div>`;
+}
+
+/* ---- 🔄 transferências: interesse ---- */
+
+function viewInterestPanel() {
+  const p = STATE.player;
+  const lvl = repLevelIndex(p.reputation);
+  const n = clamp(1 + Math.floor(lvl / 2), 1, 4);
+  if (!STATE.interestCache || STATE.interestCache.week !== p.week) {
+    const interested = [];
+    for (let i = 0; i < n; i++) {
+      const t = clamp(p.club.tier + rand(0, 2), 1, clamp(lvl + 1, 1, 6));
+      const isIntl = t >= 5;
+      let club, country;
+      if (isIntl) { const pool = TRANSFER_COUNTRIES.filter(c => TRANSFER_CLUBS[c].tier === t); country = pick(pool.length ? pool : TRANSFER_COUNTRIES); club = pick(TRANSFER_CLUBS[country].clubs); }
+      else { club = genClubName(t); country = 'Brasil'; }
+      interested.push({ club, country, level: pick(['Baixo', 'Médio', 'Alto']) });
+    }
+    STATE.interestCache = { week: p.week, list: interested };
+  }
+  const rows = STATE.interestCache.list.map(o => `<div class="interest-row">${crestImg(o.club, 28)}<div class="interest-info"><span>${escapeHtml(o.club)}</span><span class="invest-detail">${escapeHtml(o.country)}</span></div><span class="squad-badge status-${o.level === 'Alto' ? 'titular' : o.level === 'Médio' ? 'reserva' : 'fora'}">${o.level}</span></div>`).join('');
+  return `<div class="card"><div class="card-title">🔄 Times de olho em você</div>${rows}<p class="hint-text">Propostas oficiais aparecem no fim da temporada.</p></div>`;
+}
+
+/* ---- ⭐ evolução ---- */
+
+function viewEvolutionPanel() {
+  const p = STATE.player;
+  const start = p.startAttrs || p.attrs;
+  const rows = ATTR_KEYS.map(k => {
+    const delta = p.attrs[k] - (start[k] != null ? start[k] : p.attrs[k]);
+    return `<div class="attr-row"><span class="attr-name">${ATTR_LABELS[k]}</span><div class="bar"><div class="bar-fill fill-${ATTR_GROUP[k]}" style="width:${p.attrs[k]}%"></div></div><span class="attr-val evo-delta ${delta > 0 ? 'gain-pos' : ''}">${delta > 0 ? '+' : ''}${delta}</span></div>`;
+  }).join('');
+  return `<div class="card"><div class="card-title">⭐ Evolução desde os 17 anos</div>${rows}</div>`;
+}
+
+/* ---- 🎯 metas ---- */
+
+function viewGoalsPanel() {
+  const p = STATE.player;
+  if (!p.contract) return `<div class="card"><div class="card-title">🎯 Metas</div><p class="hint-text">Sem contrato ativo.</p></div>`;
+  const objectives = p.contract.objectives || [];
+  const ss = p.seasonStats;
+  const avgRating = ss.matches ? (ss.ratingSum / ss.matches) : 0;
+  const items = objectives.map(o => {
+    let met;
+    if (/acesso|título/i.test(o)) met = avgRating >= 7 && (ss.wins || 0) > (ss.losses || 0);
+    else if (/identidade|Valorizar/i.test(o)) met = p.reputation >= 100;
+    else met = avgRating >= 6.5;
+    return `<div class="goal-item ${met ? 'goal-met' : ''}">${met ? '✅' : '⏳'} ${escapeHtml(o)}</div>`;
+  }).join('') || '<div class="news-item muted">Nenhuma meta definida.</div>';
+  return `<div class="card"><div class="card-title">🎯 Metas para renovação</div>
+    <p class="hint-text">Contrato termina em ${p.contract.seasonsLeft} temporada(s).</p>
+    ${items}
+  </div>`;
+}
+
+/* ---- 🩺 dm ---- */
+
+function viewMedicalPanel() {
+  const p = STATE.player;
+  const rows = p.injuryHistory.slice(-8).reverse().map(h => `<div class="news-item">🩹 ${escapeHtml(h.name)} (${h.sev}) — ${h.age} anos, ${h.turns} semana(s) fora</div>`).join('') || '<div class="news-item muted">Nenhuma lesão registrada.</div>';
+  const current = p.injury ? `<div class="offer-quote">🩺 Ativo agora: ${escapeHtml(p.injury.name)} — ${p.injury.turnsLeft} semana(s) restantes.</div>` : '<div class="offer-quote">✅ Sem lesões no momento.</div>';
+  return `<div class="card"><div class="card-title">🩺 Departamento Médico</div>${current}<div class="card-title" style="margin-top:12px">Histórico</div>${rows}</div>`;
+}
+
+/* ---- 🛡️ meu contrato ---- */
+
+function viewContractPanel() {
+  const p = STATE.player;
+  if (!p.contract || !p.club) return `<div class="card"><div class="card-title">🛡️ Meu Contrato</div><p class="hint-text">Sem contrato ativo.</p></div>`;
+  const c = p.contract;
+  const roleLabel = { titular: 'Titular', 'rotação': 'Rotação', reserva: 'Reserva' }[c.role] || c.role;
+  return `<div class="card"><div class="card-title">🛡️ Meu Contrato — ${escapeHtml(p.club.name)}</div>
+    <div class="stat-grid">
+      <div class="stat-box"><b>${c.seasonsLeft}</b><span>Temporadas</span></div>
+      <div class="stat-box"><b>${fmtMoney(c.salary)}</b><span>Salário/mês</span></div>
+      <div class="stat-box"><b>${fmtMoney(c.bonusGol)}</b><span>Bônus/gol</span></div>
+    </div>
+    <div class="offer-line" style="margin-top:12px"><span>Papel esperado</span><b>${roleLabel}</b></div>
+    <div class="offer-line"><span>Luva recebida</span><b>${fmtMoney(c.signingBonus || 0)}</b></div>
+  </div>`;
+}
+
+/* ---- partida ---- */
+
+/* ---- propostas (contrato inicial e transferências) ---- */
+
+function renderOffers() {
+  const po = STATE.pendingOffers;
+  if (!po) { STATE.screen = 'hub'; return renderHub(); }
+  const roleLabel = { titular: 'Titular', 'rotação': 'Peça de rotação', reserva: 'Reserva' };
+  const cards = po.offers.map((o, i) => `
+    <div class="offer-card">
+      <div class="offer-card-top">
+        <span class="offer-num">PROPOSTA ${String(i + 1).padStart(2, '0')}</span>
+        <span class="offer-compat">${o.compat}% compatível</span>
+      </div>
+      <div class="offer-club-row">
+        ${crestImg(o.club, 46)}
+        <div class="offer-club-info">
+          <span class="offer-league">${o.country === 'Brasil' ? 'Brasileirão Série ' + o.division : o.country}</span>
+          <span class="offer-club-name">${escapeHtml(o.club)}</span>
+        </div>
+      </div>
+      <div class="offer-quote">💬 ${escapeHtml(o.quote)}</div>
+      <div class="offer-stats-grid">
+        <div class="offer-stat"><span>Contrato</span><b>${o.years} anos</b></div>
+        <div class="offer-stat"><span>Salário</span><b>${fmtMoney(o.salary)}</b></div>
+        <div class="offer-stat"><span>Luva de assinatura</span><b>${fmtMoney(o.signingBonus)}</b></div>
+        <div class="offer-stat"><span>Papel esperado</span><b>${roleLabel[o.role]}</b></div>
+      </div>
+      <div class="offer-line"><span>Nível do elenco</span><b>${o.squadLevel}</b></div>
+      <div class="offer-line"><span>Ambição do clube</span><b>${o.ambition}</b></div>
+      <div class="offer-objectives">
+        <div class="offer-obj-title">🎯 OBJETIVOS DO PROJETO</div>
+        ${o.objectives.map(ob => `<div class="offer-obj-item">✓ ${escapeHtml(ob)}</div>`).join('')}
+      </div>
+      <button class="btn btn-gold btn-block" onclick="${po.onAcceptPrefix}(${i})">Aceitar proposta →</button>
+    </div>
+  `).join('');
+  const stayBtn = po.allowStay ? `<button class="btn btn-outline btn-block offers-stay" onclick="declineTransferOffer()">✕ Permanecer no ${escapeHtml(po.currentClub)}</button>` : '';
+  return renderShell(`
+    <div class="offers-header"><h2>${escapeHtml(po.title)}</h2><p>${escapeHtml(po.intro)}</p></div>
+    ${cards}
+    ${stayBtn}
+  `);
+}
+
+function renderMatchMoment() {
+  const pm = STATE.pendingMatch;
+  const bm = pm.bigMoment;
+  const roleIcon = { ataque: '⚽', meio: '🎯', defesa: '🛡️', goleiro: '🧤' }[bm.role];
+  const opts = bm.options.map((o, i) => `<button class="moment-btn" onclick="chooseBigMoment(${i})"><span class="moment-label">${o.label}</span><span class="moment-attr">${ATTR_LABELS[o.attr]}</span></button>`).join('');
+  return renderShell(`
+    <div class="card card-moment">
+      <div class="moment-vs">vs ${escapeHtml(pm.opponentName)}</div>
+      <div class="moment-icon">${roleIcon}</div>
+      <p class="moment-text">${escapeHtml(bm.text)}</p>
+      <div class="moment-options">${opts}</div>
+    </div>
+  `);
+}
+
+/* ---- pênalti ---- */
+
+const PENALTY_ZONE_POS = {
+  se: { top: '10%', left: '18%' }, sc: { top: '34%', left: '50%' }, sd: { top: '10%', left: '82%' },
+  ie: { top: '62%', left: '18%' }, id: { top: '62%', left: '82%' },
+};
+
+function renderPenalty() {
+  const pm = STATE.pendingMatch;
+  const bm = pm.bigMoment;
+  const isShooting = bm.penaltyRole === 'cobrando';
+  const zones = PENALTY_ZONES.map(z => {
+    const pos = PENALTY_ZONE_POS[z];
+    return `<button class="pk-zone" style="top:${pos.top};left:${pos.left}" onclick="resolvePenalty('${z}')" aria-label="canto"><span class="pk-dot"></span></button>`;
+  }).join('');
+  return renderShell(`
+    <div class="card card-penalty">
+      <div class="pk-tag">PÊNALTI!</div>
+      <div class="pk-sub">vs ${escapeHtml(pm.opponentName)}</div>
+      <p class="pk-text">${escapeHtml(bm.text)}</p>
+      <p class="pk-instruction">${isShooting ? '— SUA COBRANÇA — TOQUE ONDE MIRAR' : '— SUA DEFESA — TOQUE PARA ONDE PULAR'}</p>
+      <div class="goal-frame">
+        ${zones}
+        <div class="keeper-figure">
+          <div class="keeper-arm keeper-arm-l"></div>
+          <div class="keeper-arm keeper-arm-r"></div>
+          <div class="keeper-body"></div>
+          <div class="keeper-head"></div>
+        </div>
+      </div>
+      <div class="pk-ball">⚽</div>
+      <p class="pk-caption">ESCOLHA O CANTO</p>
+    </div>
+  `);
+}
+
+/* ---- encontre seu amor ---- */
+
+let _swipeState = null;
+function swipeStart(e) {
+  const t = e.touches ? e.touches[0] : e;
+  _swipeState = { startX: t.clientX, dx: 0 };
+}
+function swipeMove(e) {
+  if (!_swipeState) return;
+  const t = e.touches ? e.touches[0] : e;
+  _swipeState.dx = t.clientX - _swipeState.startX;
+  const card = document.getElementById('swipe-card');
+  if (card) {
+    card.style.transform = `translateX(${_swipeState.dx}px) rotate(${_swipeState.dx / 18}deg)`;
+    card.style.opacity = String(clamp(1 - Math.abs(_swipeState.dx) / 400, 0.4, 1));
+  }
+}
+function swipeEnd() {
+  if (!_swipeState) return;
+  const dx = _swipeState.dx;
+  _swipeState = null;
+  if (dx < -70) { swipeChoice('quero'); return; }
+  if (dx > 70) { swipeChoice('nao'); return; }
+  const card = document.getElementById('swipe-card');
+  if (card) { card.style.transform = ''; card.style.opacity = '1'; }
+}
+
+function renderDatingApp() {
+  const c = STATE.datingCandidate;
+  if (!c) return renderShell(`<div class="card"><p>Carregando...</p></div>`);
+  const qualities = c.qualities.map(q => `<span class="quality-chip">${escapeHtml(q)}</span>`).join('');
+  return renderShell(`
+    <div class="dating-screen">
+      <div class="dating-header">💘 Encontre seu Amor</div>
+      <div class="swipe-card" id="swipe-card" ontouchstart="swipeStart(event)" ontouchmove="swipeMove(event)" ontouchend="swipeEnd()">
+        <div class="swipe-avatar">👩</div>
+        <div class="swipe-name">${escapeHtml(c.name)}, ${c.age}</div>
+        <div class="swipe-qualities">${qualities}</div>
+      </div>
+      <p class="hint-text">Arraste o card ou use os botões — esquerda quero, direita não.</p>
+      <div class="swipe-actions">
+        <button class="btn swipe-btn swipe-btn-like" onclick="swipeChoice('quero')">❤️ Quero</button>
+        <button class="btn swipe-btn swipe-btn-nope" onclick="swipeChoice('nao')">✖️ Não</button>
+      </div>
+      <button class="btn btn-ghost btn-block" onclick="closeDatingApp()">Fechar app</button>
+    </div>
+  `);
+}
+
+function renderMatchResult() {
+  const pm = STATE.pendingMatch;
+  const resultLabel = { vitoria: 'VITÓRIA', empate: 'EMPATE', derrota: 'DERROTA' }[pm.result];
+  const resultClass = { vitoria: 'result-win', empate: 'result-draw', derrota: 'result-loss' }[pm.result];
+  let momentBlock = '';
+  if (pm.bigMoment && pm.bigMoment.chosenLabel) {
+    momentBlock = `<div class="moment-recap ${pm.bigMoment.success ? 'success' : 'fail'}">${escapeHtml(pm.momentText)}</div>`;
+  }
+  const statLine = [];
+  if (pm.playerGoals) statLine.push(`⚽ ${pm.playerGoals} gol(s)`);
+  if (pm.playerAssists) statLine.push(`🎯 ${pm.playerAssists} assist.`);
+  if (pm.learnedAttr) statLine.push(`📈 ${ATTR_LABELS[pm.learnedAttr]} evoluiu`);
+  if (pm.gotInjured) statLine.push('🩹 lesionado');
+
+  return renderShell(`
+    <div class="card card-result ${resultClass}">
+      <div class="result-tag">${resultLabel}</div>
+      <div class="result-score">${pm.myGoalsTeam} × ${pm.oppGoalsTeam}</div>
+      <div class="result-vs">vs ${escapeHtml(pm.opponentName)}</div>
+      ${momentBlock}
+      <div class="result-rating">Sua nota: <strong>${pm.rating}</strong></div>
+      ${statLine.length ? `<div class="result-stats">${statLine.join(' · ')}</div>` : ''}
+      ${pm.repGain ? `<div class="result-rep">+${pm.repGain} reputação</div>` : ''}
+      <button class="btn btn-primary btn-block" onclick="continueAfterMatch()">Continuar</button>
+    </div>
+  `);
+}
+
+/* ---- eventos / resumo / legado ---- */
+
+function renderEvent() {
+  const e = STATE.pendingEvent;
+  if (!e) { STATE.screen = 'hub'; return renderHub(); }
+  const bodyHtml = e.body.map(line => line === '' ? '<div class="event-gap"></div>' : `<p>${line}</p>`).join('');
+  const choicesHtml = e.choices.map(c => `
+    <button class="event-choice" onclick="${c.onclick}">
+      <span class="choice-label">${c.label}</span>
+      ${c.sub ? `<span class="choice-sub">${c.sub}</span>` : ''}
+    </button>
+  `).join('');
+  return renderShell(`
+    <div class="card card-event">
+      ${e.stamp ? `<div class="stamp stamp-${slug(e.stamp)}">${e.stamp}</div>` : ''}
+      <h2 class="event-title">${e.title}</h2>
+      <div class="event-body">${bodyHtml}</div>
+      <div class="event-choices">${choicesHtml}</div>
+    </div>
+  `);
+}
+
+function renderSummary() {
+  const s = STATE.pendingSummary;
+  if (!s) { STATE.screen = 'hub'; return renderHub(); }
+  const linesHtml = s.lines.map(l => `<p>${l}</p>`).join('');
+  return renderShell(`
+    <div class="card card-summary">
+      ${s.stamp ? `<div class="stamp stamp-${slug(s.stamp)}">${s.stamp}</div>` : ''}
+      <h2 class="event-title">${s.title}</h2>
+      <div class="event-body">${linesHtml}</div>
+      <button class="btn btn-gold btn-block" onclick="afterSummaryContinue()">Continuar</button>
+    </div>
+  `);
+}
+
+function renderLegacy() {
+  const L = STATE.pendingLegacy;
+  if (!L) return renderMenu();
+  const trophyList = L.trophies.map(t => `<div class="legacy-trophy">🏆 ${t.name} <span>(${t.age} anos${t.club ? ' · ' + escapeHtml(t.club) : ''})</span></div>`).join('');
+  const awardList = L.awards.map(a => `<div class="legacy-trophy">🥇 ${a.name} <span>(${a.age} anos)</span></div>`).join('');
+  return `
+    <div class="legacy-screen">
+      <div class="legacy-stamp">${L.statusName.toUpperCase()}</div>
+      <h1 class="title-display">${escapeHtml(L.nickname || L.name)}</h1>
+      <p class="legacy-sub">${L.position} · encerrou a carreira aos ${L.age} anos</p>
+      <div class="stat-grid legacy-grid">
+        <div class="stat-box"><b>${L.matches}</b><span>Jogos</span></div>
+        <div class="stat-box"><b>${L.goals}</b><span>Gols</span></div>
+        <div class="stat-box"><b>${L.assists}</b><span>Assistências</span></div>
+        <div class="stat-box"><b>${L.titles}</b><span>Títulos</span></div>
+        <div class="stat-box"><b>${L.caps}</b><span>Jogos Seleção</span></div>
+        <div class="stat-box"><b>${L.natGoals}</b><span>Gols Seleção</span></div>
+        <div class="stat-box"><b>${L.clubs}</b><span>Clubes</span></div>
+        <div class="stat-box"><b>${fmtMoneyShort(L.maxValue)}</b><span>Valor máx.</span></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Legado</div>
+        ${trophyList || awardList ? (trophyList + awardList) : '<div class="news-item muted">Uma carreira sem títulos — mas com uma história pra contar.</div>'}
+      </div>
+      <p class="legacy-postcareer">Depois de pendurar as chuteiras: <strong>${escapeHtml(L.postCareer || '')}</strong></p>
+      <button class="btn btn-gold btn-block" onclick="startOverFromLegacy()">Começar Nova Carreira</button>
+    </div>
+  `;
+}
+
+/* =========================== 15. INICIALIZAÇÃO =========================== */
+
+async function init() {
+  const root = document.getElementById('root');
+  if (root) root.innerHTML = '<div class="loading"><div class="loading-ball">⚽</div><p>Carregando...</p></div>';
+  const ok = await loadSave();
+  if (!ok) STATE = freshState();
+  render();
+}
+
+if (typeof window !== 'undefined' && typeof document !== 'undefined') {
+  window.addEventListener('DOMContentLoaded', init);
+}
+</script>
+</body>
+</html>
