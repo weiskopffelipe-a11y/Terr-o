@@ -135,6 +135,8 @@ input { font-family: var(--font-body); }
 .sb-name { font-weight: 700; font-size: 15px; color: var(--giz); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sb-meta { font-family: var(--font-mono); font-size: 11px; color: var(--giz-dim); letter-spacing: 0.02em; margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .sb-avatar { font-size: 26px; flex-shrink: 0; }
+.sb-avatar-wrap { position: relative; flex-shrink: 0; }
+.sb-hair-tag { position: absolute; top: -4px; right: -6px; font-size: 12px; }
 
 .sb-stamp {
   display: inline-block;
@@ -612,6 +614,31 @@ input { font-family: var(--font-body); }
 @media (max-width: 360px) {
   .train-grid { grid-template-columns: repeat(2, 1fr); }
   .result-score { font-size: 42px; }
+}
+
+/* Tablet / iPad retrato (~744-834px de largura útil) */
+@media (min-width: 700px) {
+  #root { max-width: 720px; }
+  .screen-body, .create-screen, .legacy-screen { padding-left: 22px; padding-right: 22px; }
+  .shortcuts-grid { grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  .stat-grid { grid-template-columns: repeat(4, 1fr); }
+  .pos-grid { grid-template-columns: repeat(3, 1fr); }
+  .offer-stats-grid { grid-template-columns: repeat(4, 1fr); }
+  .train-grid { grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .card, .offer-card { padding: 20px 22px; }
+  .btn-lg, .btn-gold.btn-block, .btn-primary.btn-block { font-size: 17px; padding: 16px 20px; }
+  .create-title, .event-title { font-size: 26px; }
+  body { font-size: 15px; }
+}
+
+/* iPad paisagem / telas maiores (~1000px+) */
+@media (min-width: 1000px) {
+  #root { max-width: 880px; }
+  .shortcuts-grid { grid-template-columns: repeat(6, 1fr); }
+  .stat-grid { grid-template-columns: repeat(6, 1fr); }
+  .menu-screen .title-display { font-size: 48px; }
+  .legacy-screen .title-display { font-size: 40px; }
+  .scoreboard { padding: 16px 24px 12px; }
 }
 </style>
 </head>
@@ -1132,17 +1159,17 @@ function finalizeCreation() {
   });
 
   const player = {
-    name: d.name.trim() || 'Jogador', nickname: d.nickname.trim(), age: 17,
+    name: d.name.trim() || 'Jogador', nickname: d.nickname.trim(), age: d.age,
     position: d.position, foot: d.foot, height: d.height, weight: d.weight,
     avatar: d.avatar, hairstyle: 'padrao', number: d.number, style: d.style, personality: d.personality,
     attrs, fatigue: 10, morale: 68, squadStatus: 'titular',
-    trainingFocus: pos.primary[0],
+    trainingFocus: [pos.primary[0]],
     reputation: 0, money: 0, followers: rand(20, 80),
-    phase: 'pro', week: 1, season: 1,
+    phase: 'bairro', week: 1, season: 1,
     club: null, contract: null, agent: null,
     friends: FRIENDS_INIT.map(f => ({ ...f })),
     rival: null,
-    romance: { status: 'solteiro', partner: null },
+    romance: { status: 'solteiro', partner: null }, children: [],
     investments: [], vehicles: [], properties: [], bills: [],
     nationalTeam: { level: 0, caps: 0, goals: 0 },
     injury: null,
@@ -1160,8 +1187,10 @@ function finalizeCreation() {
 
   STATE.player = player;
   player.startAttrs = { ...attrs };
-  addLog(`Aos 17 anos, ${player.name} assina os primeiros contatos com o profissional. ⚽`);
-  presentInitialOffers();
+  addLog(`Tudo começa aqui: ${player.name} pisa na várzea pela primeira vez. ⚽`);
+  STATE.screen = 'hub';
+  persist();
+  render();
 }
 
 function pickDefaultFocus(p) {
@@ -1513,10 +1542,10 @@ function continueAfterMatch() {
 
 /* =========================== 7. FASE: BAIRRO =========================== */
 
-function bairroPlayWeek(trainKey) {
+function bairroPlayWeek() {
   const p = STATE.player;
   if (p.injury) return; // segurança
-  if (trainKey === 'rest') doRest(); else doTraining(trainKey);
+  applyAutomaticTraining(p);
 
   const oppStrength = clamp(overallRating(p) + rand(-10, 8), 15, 70);
   p.bairro.matchesPlayed++;
@@ -1555,7 +1584,7 @@ function buildScoutedEvent() {
   const good = p.bairro.wins >= 3 || p.reputation >= 30;
   p.flags.peneiraClubBig = good;
   return {
-    title: 'Fim do Campeonato de Bairro', stamp: 'BAIRRO',
+    title: 'Fim do Campeonato de Várzea', stamp: 'VÁRZEA',
     body: [
       `O time terminou a campanha com ${p.bairro.wins} vitória(s) em ${CONFIG.BAIRRO_MATCHES} jogos.`,
       good ? 'A sua atuação chamou atenção: um olheiro te convida para uma peneira num clube de peso.'
@@ -1647,10 +1676,10 @@ function updateRivalForm() {
   p.rival.form = clamp(p.rival.form + rand(-3, 3), 20, 95);
 }
 
-function baseWeekAction(trainKey) {
+function baseWeekAction() {
   const p = STATE.player;
   if (p.injury) return;
-  if (trainKey === 'rest') doRest(); else doTraining(trainKey);
+  applyAutomaticTraining(p);
   p.week++;
   updateRivalForm();
   applyWeeklyPassives();
@@ -1837,30 +1866,40 @@ function computeSquadStatus(p) {
   return 'fora';
 }
 
+function fractionalGain(x) {
+  const base = Math.floor(x);
+  const remainder = x - base;
+  return base + (chance(remainder) ? 1 : 0);
+}
+
+function growWithDiminish(p, key, base, mult) {
+  const cur = p.attrs[key];
+  const dim = clamp(1.35 - cur / 115, 0.15, 1.2);
+  const gain = fractionalGain(base * mult * dim);
+  if (gain > 0) growAttr(p, key, gain);
+  return gain;
+}
+
 function applyAutomaticTraining(p) {
-  const focus = p.trainingFocus && ATTR_KEYS.includes(p.trainingFocus) ? p.trainingFocus : pickDefaultFocus(p);
-  p.trainingFocus = focus;
-  const mult = clamp(1 + personalityFx('trainingMult') - p.fatigue / 140, 0.4, 1.9);
+  if (!Array.isArray(p.trainingFocus) || !p.trainingFocus.length) {
+    p.trainingFocus = [p.trainingFocus && ATTR_KEYS.includes(p.trainingFocus) ? p.trainingFocus : pickDefaultFocus(p)];
+  }
+  p.trainingFocus = p.trainingFocus.filter(k => ATTR_KEYS.includes(k)).slice(0, 3);
+  if (!p.trainingFocus.length) p.trainingFocus = [pickDefaultFocus(p)];
 
-  const curFocus = p.attrs[focus];
-  const dimFocus = clamp(1.15 - curFocus / 105, 0.12, 1);
-  const gainFocus = Math.max(0, Math.round(rand(2, 3) * mult * dimFocus));
-  if (gainFocus > 0) growAttr(p, focus, gainFocus);
+  const mult = clamp(1 + personalityFx('trainingMult') - p.fatigue / 260, 0.65, 1.9);
 
-  const others = [];
+  const gains = {};
+  p.trainingFocus.forEach(k => { gains[k] = growWithDiminish(p, k, 0.66, mult); });
+
   ATTR_KEYS.forEach(k => {
-    if (k === focus) return;
-    if (chance(0.32)) {
-      const cur = p.attrs[k];
-      const dim = clamp(1.1 - cur / 110, 0.08, 1);
-      const g = Math.max(0, Math.round(rand(0, 1) * mult * dim));
-      if (g > 0) { growAttr(p, k, g); others.push(k); }
-    }
+    if (p.trainingFocus.includes(k)) return;
+    growWithDiminish(p, k, 0.13, mult);
   });
 
-  p.fatigue = clamp(p.fatigue + rand(5, 10), 0, 100);
-  if (p.fatigue >= 90 && chance(0.05)) triggerInjury('sobrecarga de jogos e treinos');
-  return { focus, gainFocus, others };
+  p.fatigue = clamp(p.fatigue + rand(2, 5), 0, 100);
+  if (p.fatigue >= 92 && chance(0.04)) triggerInjury('sobrecarga de jogos e treinos');
+  return { focusList: p.trainingFocus, gains };
 }
 
 function proWeekAction() {
@@ -1871,7 +1910,8 @@ function proWeekAction() {
   p.money += p.contract.salary;
   if (p.flags.passiveIncome) p.money += p.flags.passiveIncome;
   applyBillsAndUpkeep(p);
-  if (trainResult.gainFocus > 0) addLog(`💪 Foco em ${ATTR_LABELS[trainResult.focus]}: +${trainResult.gainFocus}. 💰 Salário: ${fmtMoney(p.contract.salary)}.`);
+  const gainedParts = trainResult.focusList.filter(k => trainResult.gains[k] > 0).map(k => `${ATTR_LABELS[k]} +${trainResult.gains[k]}`);
+  if (gainedParts.length) addLog(`💪 Treino: ${gainedParts.join(', ')}. 💰 Salário: ${fmtMoney(p.contract.salary)}.`);
   else addLog(`💰 Salário recebido: ${fmtMoney(p.contract.salary)}.`);
   applyWeeklyPassives();
 
@@ -2224,10 +2264,11 @@ function maybeQueuePostMatchEvent(pm) {
 
 function afterSummaryContinue() {
   const s = STATE.pendingSummary;
+  const p = STATE.player;
   STATE.pendingSummary = null;
   if (!s) { STATE.screen = 'hub'; persist(); render(); return; }
   if (s.kind === 'base-end') {
-    if (s.proceed) prepareProTransition(); else { STATE.screen = 'hub'; persist(); render(); }
+    if (s.proceed) { p.phase = 'pro'; p.week = 1; p.rival = null; presentInitialOffers(); } else { STATE.screen = 'hub'; persist(); render(); }
     return;
   }
   if (s.kind === 'pro-end') {
@@ -2481,6 +2522,8 @@ function buildLegacy() {
     clubs: p.stats.clubsCount, maxValue: p.stats.maxValue,
     trophies: p.trophies, awards: p.awardsLog,
     statusName: REP_LEVELS[lvl - 1].name, postCareer: p.flags.postCareer, age: p.age,
+    romanceStatus: p.romance.status, partnerName: p.romance.partner ? p.romance.partner.name : null,
+    children: (p.children || []).map(c => c.name),
   };
   STATE.screen = 'legacy';
   persist();
@@ -2514,17 +2557,17 @@ function applyBillsAndUpkeep(p) {
 }
 
 const VEHICLE_CATALOG = [
-  { id: 'popular', name: 'Carro popular', price: 45000, upkeep: 250 },
-  { id: 'sedan', name: 'Sedã executivo', price: 120000, upkeep: 600 },
-  { id: 'suv', name: 'SUV de luxo', price: 320000, upkeep: 1400 },
-  { id: 'esportivo', name: 'Esportivo importado', price: 850000, upkeep: 3500 },
-  { id: 'superesportivo', name: 'Superesportivo', price: 2200000, upkeep: 9000 },
+  { id: 'popular', name: 'Fiat Mobi', price: 45000, upkeep: 250 },
+  { id: 'sedan', name: 'Toyota Corolla', price: 120000, upkeep: 600 },
+  { id: 'suv', name: 'BMW X5', price: 320000, upkeep: 1400 },
+  { id: 'esportivo', name: 'Porsche 911', price: 850000, upkeep: 3500 },
+  { id: 'superesportivo', name: 'Lamborghini Huracán', price: 2200000, upkeep: 9000 },
 ];
 const PROPERTY_CATALOG = [
-  { id: 'apto', name: 'Apartamento simples', price: 180000, upkeep: 400 },
-  { id: 'casa', name: 'Casa em condomínio', price: 650000, upkeep: 1200 },
-  { id: 'cobertura', name: 'Cobertura na cidade', price: 1800000, upkeep: 3200 },
-  { id: 'mansao', name: 'Mansão com campo particular', price: 6000000, upkeep: 9500 },
+  { id: 'apto', name: 'Apartamento em Moema, São Paulo', price: 180000, upkeep: 400 },
+  { id: 'casa', name: 'Casa em Alphaville, Barueri', price: 650000, upkeep: 1200 },
+  { id: 'cobertura', name: 'Cobertura nos Jardins, São Paulo', price: 1800000, upkeep: 3200 },
+  { id: 'mansao', name: 'Mansão em Angra dos Reis', price: 6000000, upkeep: 9500 },
 ];
 
 function cantAfford() { addLog('💸 Saldo insuficiente para essa compra.'); returnToHub(); }
@@ -2609,32 +2652,45 @@ function relationshipStatusLabel(s) { return ROMANCE_STATUS_LABEL[s] || s; }
 
 function openTrainingMenu() {
   const p = STATE.player;
-  const focus = p.trainingFocus || pickDefaultFocus(p);
+  if (!Array.isArray(p.trainingFocus)) p.trainingFocus = p.trainingFocus ? [p.trainingFocus] : [pickDefaultFocus(p)];
+  const focusList = p.trainingFocus;
   const groupIcon = { tec: '⚙️', fis: '💪', men: '🧠' };
   const choices = [];
   ['tec', 'fis', 'men'].forEach(g => {
     ATTR_KEYS.filter(k => ATTR_GROUP[k] === g).forEach(k => {
+      const selected = focusList.includes(k);
       choices.push({
-        label: `${groupIcon[g]} ${ATTR_LABELS[k]}${k === focus ? ' ✓' : ''}`,
+        label: `${groupIcon[g]} ${ATTR_LABELS[k]}${selected ? ' ✓' : ''}`,
         sub: `${GROUP_LABELS[g]} · atual: ${p.attrs[k]}`,
-        onclick: `setTrainingFocus('${k}')`,
+        onclick: `toggleTrainingFocus('${k}')`,
       });
     });
   });
-  choices.push({ label: 'Fechar', onclick: 'returnToHub()' });
+  choices.push({ label: 'Concluir', onclick: 'returnToHub()' });
+  const namesTxt = focusList.map(k => ATTR_LABELS[k]).join(', ');
   STATE.pendingEvent = {
     title: '🏋️ Treinamento', stamp: 'TREINO',
-    body: [`Foco atual: ${ATTR_LABELS[focus]}.`, 'Esse atributo evolui mais rápido toda semana. Os outros continuam melhorando devagar, sozinhos. Troque quando quiser.'],
+    body: [`Habilidades principais (${focusList.length}/3): ${namesTxt || 'nenhuma'}.`, 'Essas evoluem bem mais rápido toda semana. As outras continuam melhorando sozinhas, só que devagar. Toque para marcar ou desmarcar — pode trocar quando quiser.'],
     choices,
   };
   STATE.screen = 'event';
   persist(); render();
 }
 
-function setTrainingFocus(key) {
-  STATE.player.trainingFocus = key;
-  addLog(`🎯 Foco de treino ajustado para ${ATTR_LABELS[key]}.`);
-  returnToHub();
+function toggleTrainingFocus(key) {
+  const p = STATE.player;
+  if (!Array.isArray(p.trainingFocus)) p.trainingFocus = p.trainingFocus ? [p.trainingFocus] : [];
+  const idx = p.trainingFocus.indexOf(key);
+  if (idx >= 0) {
+    p.trainingFocus.splice(idx, 1);
+    addLog(`🎯 ${ATTR_LABELS[key]} não é mais uma habilidade principal.`);
+  } else if (p.trainingFocus.length >= 3) {
+    addLog('⚠️ Você já escolheu 3 habilidades principais — desmarque uma antes de adicionar outra.');
+  } else {
+    p.trainingFocus.push(key);
+    addLog(`🎯 ${ATTR_LABELS[key]} agora é uma habilidade principal.`);
+  }
+  openTrainingMenu();
 }
 
 function openCelular() {
@@ -2661,6 +2717,8 @@ const INVESTMENT_TYPES = {
   negocio:  { name: 'Negócio Próprio', risk: 'Médio-Alto', desc: 'Um restaurante ou academia com seu nome.', meanReturn: 0.013, volatility: 0.030 },
   cripto:   { name: 'Criptomoedas', risk: 'Muito Alto', desc: 'Ganhos explosivos, riscos enormes.', meanReturn: 0.030, volatility: 0.160 },
 };
+const STOCK_COMPANIES = ['Petrobras', 'Vale', 'Itaú Unibanco', 'Banco do Brasil', 'Ambev', 'WEG', 'Apple', 'Amazon', 'Tesla', 'Microsoft', 'Nike'];
+const CRYPTO_COINS = ['Bitcoin', 'Ethereum', 'Solana', 'Cardano', 'Dogecoin', 'Litecoin'];
 
 function openBanco() {
   const p = STATE.player;
@@ -2697,6 +2755,21 @@ function openInvestMenu() {
 }
 
 function chooseInvestType(key) {
+  if (key === 'acoes' || key === 'cripto') { openInstrumentPicker(key); return; }
+  openAmountPicker(key, INVESTMENT_TYPES[key].name);
+}
+
+function openInstrumentPicker(key) {
+  const t = INVESTMENT_TYPES[key];
+  const pool = key === 'acoes' ? STOCK_COMPANIES : CRYPTO_COINS;
+  const choices = pool.map(name => ({ label: name, onclick: `openAmountPicker('${key}','${name}')` }));
+  choices.push({ label: 'Voltar', onclick: 'openInvestMenu()' });
+  STATE.pendingEvent = { title: t.name, stamp: 'DINHEIRO', body: [t.desc, 'Escolha onde aplicar:'], choices };
+  STATE.screen = 'event';
+  persist(); render();
+}
+
+function openAmountPicker(key, instrumentName) {
   const p = STATE.player;
   const t = INVESTMENT_TYPES[key];
   const labels = ['10% do saldo', '25% do saldo', '50% do saldo', 'Tudo'];
@@ -2704,11 +2777,11 @@ function chooseInvestType(key) {
   const seen = new Set();
   const choices = [];
   raw.forEach((amount, i) => {
-    if (amount >= 100 && !seen.has(amount)) { seen.add(amount); choices.push({ label: labels[i], sub: fmtMoney(amount), onclick: `investAmount('${key}',${amount})` }); }
+    if (amount >= 100 && !seen.has(amount)) { seen.add(amount); choices.push({ label: labels[i], sub: fmtMoney(amount), onclick: `investAmount('${key}',${amount},'${instrumentName}')` }); }
   });
-  choices.push({ label: 'Voltar', onclick: 'openInvestMenu()' });
+  choices.push({ label: 'Voltar', onclick: key === 'acoes' || key === 'cripto' ? `openInstrumentPicker('${key}')` : 'openInvestMenu()' });
   STATE.pendingEvent = {
-    title: t.name, stamp: 'DINHEIRO',
+    title: instrumentName, stamp: 'DINHEIRO',
     body: [t.desc, `Risco: ${t.risk} · Saldo disponível: ${fmtMoney(p.money)}.`, choices.length === 1 ? 'Você não tem saldo suficiente pra investir agora.' : ''],
     choices,
   };
@@ -2716,14 +2789,15 @@ function chooseInvestType(key) {
   persist(); render();
 }
 
-function investAmount(key, amount) {
+function investAmount(key, amount, instrumentName) {
   const p = STATE.player;
   const t = INVESTMENT_TYPES[key];
+  const displayName = instrumentName || t.name;
   amount = Math.min(amount, p.money);
   if (amount < 100) { addLog('💸 Valor pequeno demais pra investir.'); returnToHub(); return; }
   p.money -= amount;
-  p.investments.push({ id: 'inv' + Date.now() + '-' + rand(100, 999), type: key, typeName: t.name, amount, value: amount, startAge: p.age });
-  addLog(`📈 Você investiu ${fmtMoney(amount)} em ${t.name}.`);
+  p.investments.push({ id: 'inv' + Date.now() + '-' + rand(100, 999), type: key, typeName: displayName, amount, value: amount, startAge: p.age });
+  addLog(`📈 Você investiu ${fmtMoney(amount)} em ${displayName}.`);
   returnToHub();
 }
 
@@ -2801,16 +2875,32 @@ function openPartnerInteract() {
   ];
   if (p.romance.status === 'namorando') choices.push({ label: '💍 Pedir em noivado', onclick: 'proposeMarriage()' });
   if (p.romance.status === 'noivo') choices.push({ label: '💒 Marcar o casamento', onclick: 'finalizeWedding()' });
+  if (p.romance.status === 'casado' && partner.happiness >= 100) {
+    choices.push({ label: '👶 Ter um filho', sub: 'Um novo capítulo pra família', onclick: 'haveChild()' });
+  }
   choices.push({ label: '💔 Terminar o relacionamento', onclick: "partnerAction('terminar')" });
   choices.push({ label: 'Voltar', onclick: 'openCelular()' });
 
-  STATE.pendingEvent = {
-    title: `💑 ${partner.name}`, stamp: 'AMOR',
-    body: [`${relationshipStatusLabel(p.romance.status)} · ${partner.quality}`, `Felicidade: ${Math.round(partner.happiness)}/100`],
-    choices,
-  };
+  const childrenLine = (p.children && p.children.length) ? `Filhos: ${p.children.map(c => c.name).join(', ')}.` : (p.romance.status === 'casado' ? 'A felicidade dela precisa estar no máximo (100) para pensarem em ter filhos.' : '');
+  const body = [`${relationshipStatusLabel(p.romance.status)} · ${partner.quality}`, `Felicidade: ${Math.round(partner.happiness)}/100`];
+  if (childrenLine) body.push(childrenLine);
+
+  STATE.pendingEvent = { title: `💑 ${partner.name}`, stamp: 'AMOR', body, choices };
   STATE.screen = 'event';
   persist(); render();
+}
+
+function haveChild() {
+  const p = STATE.player;
+  const partner = p.romance.partner;
+  if (!partner || p.romance.status !== 'casado' || partner.happiness < 100) { returnToHub(); return; }
+  if (!Array.isArray(p.children)) p.children = [];
+  const childName = randomName(chance(0.5) ? 'm' : 'f');
+  p.children.push({ name: childName, bornAge: p.age, bornSeason: p.season });
+  partner.happiness = clamp(partner.happiness - 25, 0, 100);
+  p.morale = clamp(p.morale + 20, 0, 100);
+  addLog(`👶 Nasceu ${childName}! ${p.name} e ${partner.name} agora são pais.`);
+  returnToHub();
 }
 
 function partnerAction(kind) {
@@ -2972,7 +3062,8 @@ function renderStatusBar() {
   const p = STATE.player;
   const pos = POSITIONS[p.position];
   const lvl = repLevelIndex(p.reputation);
-  const phaseLabel = { bairro: 'BAIRRO', base: 'BASE', pro: 'PROFISSIONAL', retired: 'LENDA' }[p.phase] || '';
+  const phaseLabel = { bairro: 'VÁRZEA', base: 'BASE', pro: 'PROFISSIONAL', retired: 'LENDA' }[p.phase] || '';
+  const hair = HAIRSTYLES[p.hairstyle] || HAIRSTYLES.padrao;
   return `
     <div class="sb-top">
       <div class="sb-num">${p.number}</div>
@@ -2980,7 +3071,7 @@ function renderStatusBar() {
         <div class="sb-name">${escapeHtml(p.nickname || p.name)}</div>
         <div class="sb-meta">${pos.short} · ${p.age} anos${p.club ? ' · ' + escapeHtml(p.club.name) : ''}</div>
       </div>
-      <div class="sb-avatar">${p.avatar}</div>
+      <div class="sb-avatar-wrap"><div class="sb-avatar">${p.avatar}</div><span class="sb-hair-tag">${hair.icon}</span></div>
     </div>
     ${phaseLabel ? `<div class="sb-stamp stamp-${slug(phaseLabel)}">${phaseLabel}</div>` : ''}
     <div class="sb-meters">
@@ -3021,7 +3112,7 @@ function createStep1() {
   const d = STATE.createData;
   return `
     <h2 class="create-title">Quem é você?</h2>
-    <p class="create-sub">Todo mundo começa em algum lugar. O seu é um campo de terra no bairro.</p>
+    <p class="create-sub">Todo mundo começa em algum lugar. O seu é a várzea.</p>
     <label class="field-label">Nome</label>
     <input class="text-input" type="text" maxlength="24" value="${escapeHtml(d.name)}" oninput="STATE.createData.name=this.value" placeholder="Seu nome completo">
     <label class="field-label">Apelido <span class="opt">(opcional)</span></label>
@@ -3144,12 +3235,63 @@ const HUB_SHORTCUTS = [
   { icon: '📖', label: 'Minha carreira', fn: "openView('career')" },
 ];
 
+function renderFocusMeters(p) {
+  const list = Array.isArray(p.trainingFocus) && p.trainingFocus.length ? p.trainingFocus : [pickDefaultFocus(p)];
+  return list.map(k => `<div class="meter-row"><span>🎯 ${ATTR_LABELS[k]}</span><div class="bar"><div class="bar-fill fill-tec" style="width:${p.attrs[k]}%"></div></div><b>${p.attrs[k]}</b></div>`).join('');
+}
+
+function renderBairroHub() {
+  const p = STATE.player;
+  return `
+    ${STATE.saveFlash ? '<div class="save-toast">💾 Jogo salvo — pode fechar e continuar depois.</div>' : ''}
+    <div class="card next-match-card">
+      <div class="card-title">⚽ VÁRZEA</div>
+      <p class="hint-text" style="margin-bottom:10px">Jogo ${Math.min(p.bairro.matchesPlayed + 1, CONFIG.BAIRRO_MATCHES)} de ${CONFIG.BAIRRO_MATCHES} — o campeonato do bairro</p>
+      <div class="meter-row"><span>Fadiga</span><div class="bar"><div class="bar-fill fill-fadiga" style="width:${p.fatigue}%"></div></div><b>${p.fatigue}%</b></div>
+      ${renderFocusMeters(p)}
+      <button class="btn btn-gold btn-block" onclick="bairroPlayWeek()">▶️ Jogar a próxima pelada</button>
+    </div>
+    <div class="quick-row">
+      <button class="btn btn-outline btn-sm" onclick="openView('attrs')">📊 Atributos</button>
+      <button class="btn btn-outline btn-sm" onclick="openView('friends')">🏠 Amigos</button>
+      <button class="btn btn-outline btn-sm" onclick="openTrainingMenu()">🏋️ Treino</button>
+      <button class="btn btn-outline btn-sm" onclick="manualSave()">💾 Salvar</button>
+    </div>
+    ${renderNewsFeed()}
+  `;
+}
+
+function renderBaseHub() {
+  const p = STATE.player;
+  const t = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
+  const status = p.squadStatus || 'titular';
+  return `
+    ${STATE.saveFlash ? '<div class="save-toast">💾 Jogo salvo — pode fechar e continuar depois.</div>' : ''}
+    <div class="card next-match-card">
+      <div class="card-title">🏟️ BASE — ${escapeHtml(p.club.name)}</div>
+      <p class="hint-text" style="margin-bottom:10px">Temporada ${p.base.seasonsDone + 1} · Semana ${t} de ${CONFIG.TURNS_PER_SEASON} · <span class="squad-badge status-${status}">${SQUAD_STATUS_LABEL[status]}</span></p>
+      <div class="meter-row"><span>Fadiga</span><div class="bar"><div class="bar-fill fill-fadiga" style="width:${p.fatigue}%"></div></div><b>${p.fatigue}%</b></div>
+      ${renderFocusMeters(p)}
+      <button class="btn btn-gold btn-block" onclick="baseWeekAction()">▶️ Avançar até o jogo</button>
+    </div>
+    <div class="quick-row">
+      <button class="btn btn-outline btn-sm" onclick="openView('attrs')">📊 Atributos</button>
+      <button class="btn btn-outline btn-sm" onclick="openView('rival')">🥊 Disputa</button>
+      <button class="btn btn-outline btn-sm" onclick="openView('friends')">🏠 Amigos</button>
+      <button class="btn btn-outline btn-sm" onclick="openTrainingMenu()">🏋️ Treino</button>
+      <button class="btn btn-outline btn-sm" onclick="manualSave()">💾 Salvar</button>
+    </div>
+    ${renderNewsFeed()}
+  `;
+}
+
 function renderHub() {
   const p = STATE.player;
   if (p.injury) return renderShell(renderInjuryHub());
+  if (p.phase === 'bairro') return renderShell(renderBairroHub());
+  if (p.phase === 'base') return renderShell(renderBaseHub());
   if (!p.club) return renderShell('<div class="card"><p>Carregando propostas...</p></div>');
 
-  const focus = p.trainingFocus || pickDefaultFocus(p);
   if (!p.nextOpponentPreview) p.nextOpponentPreview = genClubName(p.club.tier);
   const nextOpp = p.nextOpponentPreview;
   const t = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
@@ -3174,7 +3316,7 @@ function renderHub() {
       <div class="card-title">CONDIÇÃO</div>
       <div class="meter-row"><span>Fadiga</span><div class="bar"><div class="bar-fill fill-fadiga" style="width:${p.fatigue}%"></div></div><b>${p.fatigue}%</b></div>
       <div class="meter-row"><span>Moral</span><div class="bar"><div class="bar-fill fill-moral" style="width:${p.morale}%"></div></div><b>${p.morale}%</b></div>
-      <div class="meter-row"><span>Foco: ${ATTR_LABELS[focus]}</span><div class="bar"><div class="bar-fill fill-tec" style="width:${p.attrs[focus]}%"></div></div><b>${p.attrs[focus]}</b></div>
+      ${renderFocusMeters(p)}
     </div>
     <div class="shortcuts-grid">${shortcutBtns}</div>
     <button class="btn btn-outline btn-block" style="margin-bottom:14px" onclick="manualSave()">💾 Salvar Jogo</button>
@@ -3295,10 +3437,13 @@ function viewPlayerPanel() {
   const p = STATE.player;
   const pos = POSITIONS[p.position];
   const hair = HAIRSTYLES[p.hairstyle] || HAIRSTYLES.padrao;
+  const familyLine = p.romance.status !== 'solteiro' && p.romance.partner
+    ? `${relationshipStatusLabel(p.romance.status)} com ${escapeHtml(p.romance.partner.name)}${p.children && p.children.length ? ` · ${p.children.length} filho(s): ${p.children.map(c => escapeHtml(c.name)).join(', ')}` : ''}`
+    : '';
   return `<div class="card player-card">
     <div class="player-card-avatar">${p.avatar}<span class="player-hair-tag">${hair.icon}</span></div>
     <div class="player-card-name">${escapeHtml(p.nickname || p.name)}</div>
-    <div class="player-card-meta">${pos.name} · ${p.age} anos · Pé ${p.foot}</div>
+    <div class="player-card-meta">${pos.name} · ${p.age} anos · Pé ${p.foot} · ${hair.name}</div>
     <div class="stat-grid" style="margin-top:14px">
       <div class="stat-box"><b>${overallRating(p)}</b><span>Geral</span></div>
       <div class="stat-box"><b>#${p.number}</b><span>Camisa</span></div>
@@ -3308,6 +3453,7 @@ function viewPlayerPanel() {
     <div class="attr-row"><span class="attr-name">Estilo</span><span class="offer-line-val">${STYLES[p.style].name}</span></div>
     <div class="attr-row"><span class="attr-name">Personalidade</span><span class="offer-line-val">${PERSONALITIES[p.personality].name}</span></div>
     <div class="attr-row"><span class="attr-name">Status</span><span class="offer-line-val">${REP_LEVELS[repLevelIndex(p.reputation) - 1].name}</span></div>
+    ${familyLine ? `<div class="attr-row"><span class="attr-name">Família</span><span class="offer-line-val">${familyLine}</span></div>` : ''}
   </div>`;
 }
 
@@ -3709,6 +3855,7 @@ function renderLegacy() {
         ${trophyList || awardList ? (trophyList + awardList) : '<div class="news-item muted">Uma carreira sem títulos — mas com uma história pra contar.</div>'}
       </div>
       <p class="legacy-postcareer">Depois de pendurar as chuteiras: <strong>${escapeHtml(L.postCareer || '')}</strong></p>
+      ${L.romanceStatus === 'casado' && L.partnerName ? `<p class="legacy-postcareer">Ao lado de <strong>${escapeHtml(L.partnerName)}</strong>${L.children.length ? `, com ${L.children.length} filho(s): ${L.children.map(escapeHtml).join(', ')}` : ''}.</p>` : ''}
       <button class="btn btn-gold btn-block" onclick="startOverFromLegacy()">Começar Nova Carreira</button>
     </div>
   `;
@@ -3726,6 +3873,12 @@ async function init() {
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
   window.addEventListener('DOMContentLoaded', init);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && STATE && STATE.player) persist();
+  });
+  window.addEventListener('pagehide', () => {
+    if (STATE && STATE.player) persist();
+  });
 }
 </script>
 </body>
