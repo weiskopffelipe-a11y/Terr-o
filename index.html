@@ -306,6 +306,12 @@ input { font-family: var(--font-body); }
   border-radius: var(--radius-sm); margin-bottom: 12px; animation: screenIn 0.25s ease both;
 }
 
+.milestone-toast {
+  background: var(--ouro-glow); border: 1.5px solid var(--ouro); color: var(--ouro);
+  font-family: var(--font-body); font-weight: 700; font-size: 13px; text-align: center; padding: 11px 14px;
+  border-radius: var(--radius-sm); margin-bottom: 12px; animation: popIn 0.35s ease both;
+}
+
 .card-news .news-item { font-size: 13px; padding: 7px 0; border-bottom: 1px solid var(--linha); color: var(--giz); line-height: 1.4; }
 .card-news .news-item:last-child { border-bottom: none; }
 .news-item.muted { color: var(--giz-faint); font-style: italic; }
@@ -475,7 +481,7 @@ input { font-family: var(--font-body); }
 .pk-zone:active { background: var(--ouro-glow); }
 .pk-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ouro); }
 
-.keeper-figure { position: absolute; bottom: 4%; left: 50%; transform: translateX(-50%); width: 22%; }
+.keeper-figure { position: absolute; bottom: 4%; left: 50%; transform: translateX(-50%); width: 22%; transition: top 0.45s cubic-bezier(.34,1.56,.64,1), left 0.45s cubic-bezier(.34,1.56,.64,1), transform 0.45s ease; }
 .keeper-head { width: 34%; aspect-ratio: 1/1; background: #e8b88a; border-radius: 50%; margin: 0 auto 2px; }
 .keeper-body { width: 60%; aspect-ratio: 1 / 1.3; background: var(--info); border-radius: 6px 6px 3px 3px; margin: 0 auto; }
 .keeper-arm { position: absolute; top: 32%; width: 42%; height: 14%; background: var(--info); border-radius: 6px; }
@@ -484,6 +490,18 @@ input { font-family: var(--font-body); }
 
 .pk-ball { font-size: 26px; margin: 12px 0 4px; }
 .pk-caption { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.1em; color: var(--giz-dim); text-transform: uppercase; }
+
+.pk-zone-revealed { pointer-events: none; opacity: 0.55; }
+.pk-ball-dot { font-size: 16px; animation: popIn 0.3s ease both; }
+.pk-result { font-family: var(--font-display); font-size: 28px; margin: 10px 0 6px; animation: popIn 0.3s ease both; }
+.pk-result.success { color: var(--grama); }
+.pk-result.fail { color: var(--risco); }
+
+.moment-reveal-icon { font-size: 44px; margin: 8px 0 4px; animation: popIn 0.35s ease both; }
+.moment-reveal { font-family: var(--font-display); font-size: 22px; letter-spacing: 0.03em; margin-bottom: 10px; }
+.moment-reveal.success { color: var(--grama); }
+.moment-reveal.fail { color: var(--risco); }
+.card-moment .btn { margin-top: 14px; }
 
 /* =========================== ENCONTRE SEU AMOR =========================== */
 
@@ -682,6 +700,7 @@ const CONFIG = {
   FORCE_RETIRE_AGE: 39,
   LOG_MAX: 50,
   ROMANCE_MIN_AGE: 18,
+  NATIONAL_WINDOW_MATCHES: 5,
 };
 
 const ATTR_KEYS = ['passe','finalizacao','drible','desarme','velocidade','forca','resistencia','visao','concentracao','lideranca'];
@@ -1132,10 +1151,43 @@ function effectiveMatchStrength(p) {
 /* =========================== 4. CRIAÇÃO DE PERSONAGEM =========================== */
 
 function newGameStart() {
+  hasSave().then(exists => {
+    if (exists) {
+      STATE.pendingEvent = {
+        title: 'Começar Nova Carreira', stamp: 'CARREIRA',
+        body: ['Você já tem um jogo salvo.', 'Começar uma nova carreira vai apagar esse progresso salvo. Tem certeza?'],
+        choices: [
+          { label: 'Sim, apagar e começar de novo', onclick: 'confirmNewGameStart()' },
+          { label: 'Cancelar', onclick: 'backToMenu()' },
+        ],
+      };
+      STATE.screen = 'event';
+      render();
+    } else {
+      confirmNewGameStart();
+    }
+  });
+}
+
+function confirmNewGameStart() {
+  wipeSave();
   STATE = freshState();
   STATE.screen = 'create';
   STATE.createStep = 1;
   render();
+}
+
+function backToMenu() {
+  STATE.pendingEvent = null;
+  STATE.screen = 'menu';
+  render();
+}
+
+function continueSavedGame() {
+  loadSave().then(ok => {
+    if (!ok) { STATE = freshState(); }
+    render();
+  });
 }
 
 function updateCreate(field, value) {
@@ -1183,7 +1235,7 @@ function finalizeCreation() {
     friends: FRIENDS_INIT.map(f => ({ ...f })),
     rival: null,
     romance: { status: 'solteiro', partner: null }, children: [],
-    investments: [], vehicles: [], properties: [], bills: [],
+    investments: [], vehicles: [], properties: [], bills: [], jewelry: [], electronics: [],
     nationalTeam: { level: 0, caps: 0, goals: 0 },
     injury: null,
     injuryHistory: [],
@@ -1441,6 +1493,7 @@ function applyBigMomentOutcome(pm, opt, success) {
 function chooseBigMoment(optionIndex) {
   const pm = STATE.pendingMatch;
   const p = STATE.player;
+  if (pm.bigMoment.revealed) return;
   const opt = pm.bigMoment.options[optionIndex];
   const attrVal = p.attrs[opt.attr];
   let successP = opt.base + (attrVal - 50) / 160;
@@ -1453,6 +1506,12 @@ function chooseBigMoment(optionIndex) {
   pm.bigMoment.success = success;
   applyBigMomentOutcome(pm, opt, success);
   pm.momentResults.push({ text: pm.momentText, success });
+  pm.bigMoment.revealed = true;
+  render();
+}
+
+function continueAfterMoment() {
+  const pm = STATE.pendingMatch;
   pm.chanceIndex++;
   advanceToNextChance();
 }
@@ -1463,6 +1522,7 @@ function resolvePenalty(myZone) {
   const pm = STATE.pendingMatch;
   const p = STATE.player;
   const bm = pm.bigMoment;
+  if (bm.revealed) return;
   const keeperZone = pickKeeperZone();
   const matched = myZone === keeperZone;
   let scored;
@@ -1508,8 +1568,35 @@ function resolvePenalty(myZone) {
 
   pm.momentText = momentText;
   pm.momentResults.push({ text: momentText, success: bm.success });
+  bm.revealed = true;
+  render();
+}
+
+function continueAfterPenalty() {
+  const pm = STATE.pendingMatch;
   pm.chanceIndex++;
   advanceToNextChance();
+}
+
+const MILESTONE_MATCH_THRESHOLDS = [10, 25, 50, 100, 150, 200, 250, 300, 350, 400];
+const MILESTONE_GOAL_THRESHOLDS = [5, 10, 25, 50, 100, 150, 200, 250];
+
+function checkMilestones(p) {
+  if (!p.flags.milestonesSeen) p.flags.milestonesSeen = {};
+  const seen = p.flags.milestonesSeen;
+  const msgs = [];
+  if (MILESTONE_MATCH_THRESHOLDS.includes(p.stats.matches) && !seen['m' + p.stats.matches]) {
+    seen['m' + p.stats.matches] = true;
+    msgs.push(`🏅 Marco atingido: ${p.stats.matches} jogos na carreira!`);
+  }
+  if (MILESTONE_GOAL_THRESHOLDS.includes(p.stats.goals) && !seen['g' + p.stats.goals]) {
+    seen['g' + p.stats.goals] = true;
+    msgs.push(`🏅 Marco atingido: ${p.stats.goals} gols na carreira!`);
+  }
+  if (p.stats.titles === 1 && !seen.firstTitle) { seen.firstTitle = true; msgs.push('🏅 Seu primeiro título como profissional!'); }
+  if (p.stats.caps === 1 && !seen.firstCap) { seen.firstCap = true; msgs.push('🏅 Sua primeira convocação para a Seleção!'); }
+  msgs.forEach(m => addLog(m));
+  if (msgs.length) STATE.milestoneFlash = msgs[msgs.length - 1];
 }
 
 function finishMatch() {
@@ -1535,6 +1622,7 @@ function finishMatch() {
   }
   p.ratingHistory.push({ week: p.week, season: p.season, opponent: pm.opponentName, result: pm.result, myGoals: pm.myGoalsTeam, oppGoals: pm.oppGoalsTeam, rating: pm.rating, playerGoals: pm.playerGoals, playerAssists: pm.playerAssists });
   if (p.ratingHistory.length > 200) p.ratingHistory.shift();
+  checkMilestones(p);
 
   p.fatigue = clamp(p.fatigue + rand(3, 6), 0, 100);
   const resultDelta = pm.result === 'vitoria' ? rand(3, 7) : pm.result === 'empate' ? rand(-1, 2) : rand(-6, -2);
@@ -1547,6 +1635,7 @@ function finishMatch() {
   if (pm.importance === 'marquee') repGain += 4;
   if (pm.importance === 'debut') repGain += 6;
   if (pm.context && pm.context.squadStatus === 'reserva') repGain = Math.round(repGain * 0.55);
+  if (pm.onResolve === 'national' && pm.importance !== 'debut') repGain = Math.round(repGain * 0.4);
   pm.repGain = Math.max(0, repGain);
   p.reputation += pm.repGain;
 
@@ -1582,6 +1671,7 @@ function continueAfterMatch() {
 
 function bairroPlayWeek(resting) {
   const p = STATE.player;
+  STATE.milestoneFlash = null;
   if (p.injury) return; // segurança
   if (resting) {
     p.fatigue = clamp(p.fatigue - rand(30, 42), 0, 100);
@@ -1722,6 +1812,7 @@ function updateRivalForm() {
 
 function baseWeekAction(resting) {
   const p = STATE.player;
+  STATE.milestoneFlash = null;
   if (p.injury) return;
   if (resting) {
     p.fatigue = clamp(p.fatigue - rand(30, 42), 0, 100);
@@ -1819,6 +1910,7 @@ function finishBaseSeasonSummary() {
     const titleName = 'Copa Estadual de Base';
     p.trophies.push({ name: titleName, season: p.season, age: p.age, club: p.club.name });
     p.stats.titles++;
+    checkMilestones(p);
     lines.push(`🏆 Seu time conquistou a ${titleName}!`);
   }
   const proceed = p.base.seasonsDone >= CONFIG.BASE_SEASONS || (p.base.seasonsDone >= 1 && p.reputation >= 150);
@@ -1980,6 +2072,7 @@ function applyAutomaticTraining(p) {
 
 function proWeekAction(resting) {
   const p = STATE.player;
+  STATE.milestoneFlash = null;
   if (p.injury) return;
   let trainResult = null;
   if (resting) {
@@ -2072,17 +2165,21 @@ function buildProSeasonSummaryData() {
     const t = pick(pool);
     p.trophies.push({ name: t, season: p.season - 1, age: p.age, club: p.club.name });
     p.stats.titles++;
+    checkMilestones(p);
     lines.push(`🏆 Campeão: ${t}!`);
   }
 
   if (avgRating >= 7.6 && chance(0.3)) {
-    let award;
-    if (ss.goals >= 14 && chance(0.5)) award = 'Artilheiro do Campeonato';
+    let award, repBonus = 25;
+    const eliteEligible = avgRating >= 8.6 && p.reputation >= 900 && p.club.tier >= 5;
+    if (eliteEligible && chance(0.15)) { award = chance(0.5) ? 'Bola de Ouro' : 'The Best FIFA'; repBonus = 70; }
+    else if (ss.goals >= 20 && chance(0.45)) { award = 'Chuteira de Ouro'; repBonus = 40; }
+    else if (ss.goals >= 14 && chance(0.5)) award = 'Artilheiro do Campeonato';
     else if (p.age <= 21) award = 'Revelação do Ano';
     else if (avgRating >= 8.3) award = 'Craque da Temporada';
     else award = pick(AWARD_POOL);
     p.awardsLog.push({ name: award, season: p.season - 1, age: p.age });
-    p.reputation += 25;
+    p.reputation += repBonus;
     lines.push(`🥇 Prêmio individual: ${award}!`);
   }
 
@@ -2271,6 +2368,7 @@ function injuryWeekTick() {
   p.fatigue = clamp(p.fatigue - 20, 0, 100);
   p.morale = clamp(p.morale + 3, 0, 100);
   if (p.phase === 'pro' && p.contract) p.money += p.contract.salary;
+  addLog(`🚑 Você não jogou esta partida — estava lesionado (${p.injury.name}).`);
   if (p.injury.turnsLeft <= 0) { addLog('✅ Recuperado! De volta aos gramados.'); p.injury = null; }
   else addLog(`🩹 Fisioterapia — faltam ${p.injury.turnsLeft} semana(s).`);
   persist();
@@ -2412,13 +2510,13 @@ function stepNationalCheck() {
   if (nt.level === 0 && p.reputation >= 260 && p.age <= 20 && chance(0.5)) { nt.level = 1; called = true; }
   else if (nt.level === 1 && p.reputation >= 480 && p.age <= 23 && chance(0.4)) { nt.level = 2; called = true; }
   else if (nt.level <= 2 && p.reputation >= 900 && chance(0.35)) { nt.level = 3; called = true; }
-  else if (nt.level === 3 && chance(p.reputation >= 1400 ? 0.45 : 0.2)) called = true;
+  else if (nt.level === 3 && chance(p.reputation >= 1400 ? 0.88 : 0.62)) called = true;
 
   if (!called) { runNextPostSeasonStep(); return; }
   const label = nt.level === 1 ? 'Sub-20' : nt.level === 2 ? 'Sub-23' : 'Principal';
   STATE.pendingEvent = {
     title: 'Convocação!', stamp: 'SELEÇÃO',
-    body: ['"Você foi convocado para representar seu país." 🇧🇷', `Seleção Brasileira ${label} — sua janela de jogos começa agora.`],
+    body: ['"Você foi convocado para representar seu país." 🇧🇷', `Seleção Brasileira ${label} — sua janela de ${CONFIG.NATIONAL_WINDOW_MATCHES} jogos começa agora.`],
     choices: [{ label: 'Disputar a janela', onclick: `playNationalWindow('${label}')` }],
   };
   STATE.screen = 'event';
@@ -2427,7 +2525,7 @@ function stepNationalCheck() {
 }
 
 function playNationalWindow(label) {
-  STATE.nationalWindow = { left: 2, label };
+  STATE.nationalWindow = { left: CONFIG.NATIONAL_WINDOW_MATCHES, label };
   STATE.pendingEvent = null;
   playNextNationalMatch();
 }
@@ -2446,6 +2544,7 @@ function continueNational() {
   const p = STATE.player;
   const pm = STATE.pendingMatch;
   p.stats.caps++;
+  checkMilestones(p);
   p.nationalTeam.caps++;
   p.nationalTeam.goals += pm.playerGoals;
   p.stats.natGoals += pm.playerGoals;
@@ -2648,6 +2747,9 @@ function buildLegacy() {
 function startOverFromLegacy() {
   wipeSave();
   STATE = freshState();
+  STATE.saveAvailable = false;
+  STATE.screen = 'create';
+  STATE.createStep = 1;
   render();
 }
 
@@ -2676,11 +2778,21 @@ function applyBillsAndUpkeep(p) {
 }
 
 const VEHICLE_CATALOG = [
-  { id: 'popular', name: 'Fiat Mobi', price: 110000, upkeep: 550 },
-  { id: 'sedan', name: 'Toyota Corolla', price: 280000, upkeep: 1300 },
-  { id: 'suv', name: 'BMW X5', price: 750000, upkeep: 3200 },
-  { id: 'esportivo', name: 'Porsche 911', price: 2000000, upkeep: 8000 },
-  { id: 'superesportivo', name: 'Lamborghini Huracán', price: 5500000, upkeep: 20000 },
+  { id: 'v1', name: 'Fiat Mobi', price: 90000, upkeep: 400 },
+  { id: 'v2', name: 'Volkswagen Gol', price: 110000, upkeep: 480 },
+  { id: 'v3', name: 'Chevrolet Onix', price: 130000, upkeep: 550 },
+  { id: 'v4', name: 'Hyundai HB20', price: 145000, upkeep: 600 },
+  { id: 'v5', name: 'Toyota Corolla', price: 220000, upkeep: 1000 },
+  { id: 'v6', name: 'Honda Civic', price: 240000, upkeep: 1100 },
+  { id: 'v7', name: 'Jeep Compass', price: 320000, upkeep: 1500 },
+  { id: 'v8', name: 'BMW X5', price: 750000, upkeep: 3200 },
+  { id: 'v9', name: 'Mercedes-Benz GLE', price: 900000, upkeep: 3800 },
+  { id: 'v10', name: 'Audi Q7', price: 850000, upkeep: 3600 },
+  { id: 'v11', name: 'Porsche 911', price: 2000000, upkeep: 8000 },
+  { id: 'v12', name: 'Porsche Cayenne', price: 1400000, upkeep: 5500 },
+  { id: 'v13', name: 'Ferrari Portofino', price: 3800000, upkeep: 14000 },
+  { id: 'v14', name: 'Lamborghini Huracán', price: 5500000, upkeep: 20000 },
+  { id: 'v15', name: 'Bugatti Chiron', price: 18000000, upkeep: 55000 },
 ];
 
 const PROPERTY_LOCATIONS = {
@@ -2697,16 +2809,63 @@ const PROPERTY_LOCATIONS = {
 };
 const DEFAULT_PROPERTY_LOCATIONS = { apto: 'centro da cidade', casa: 'bairro nobre', cobertura: 'região central', mansao: 'zona litorânea' };
 const PROPERTY_BASE = [
-  { id: 'apto', label: 'Apartamento', price: 320000, upkeep: 700 },
-  { id: 'casa', label: 'Casa em condomínio', price: 1200000, upkeep: 2200 },
-  { id: 'cobertura', label: 'Cobertura', price: 3400000, upkeep: 5800 },
-  { id: 'mansao', label: 'Mansão', price: 11000000, upkeep: 16000 },
+  { id: 'p1', label: 'Kitnet', price: 90000, upkeep: 250, locKey: 'apto' },
+  { id: 'p2', label: 'Apartamento Studio', price: 180000, upkeep: 400, locKey: 'apto' },
+  { id: 'p3', label: 'Apartamento 2 Quartos', price: 320000, upkeep: 700, locKey: 'apto' },
+  { id: 'p4', label: 'Apartamento 3 Quartos', price: 550000, upkeep: 1100, locKey: 'apto' },
+  { id: 'p5', label: 'Casa Simples', price: 750000, upkeep: 1400, locKey: 'casa' },
+  { id: 'p6', label: 'Casa em Condomínio', price: 1200000, upkeep: 2200, locKey: 'casa' },
+  { id: 'p7', label: 'Sobrado', price: 1800000, upkeep: 3000, locKey: 'casa' },
+  { id: 'p8', label: 'Cobertura', price: 2600000, upkeep: 4200, locKey: 'cobertura' },
+  { id: 'p9', label: 'Cobertura Duplex', price: 3800000, upkeep: 5800, locKey: 'cobertura' },
+  { id: 'p10', label: 'Casa de Praia', price: 4800000, upkeep: 7000, locKey: 'cobertura' },
+  { id: 'p11', label: 'Chácara', price: 6000000, upkeep: 8500, locKey: 'mansao' },
+  { id: 'p12', label: 'Mansão', price: 9000000, upkeep: 12000, locKey: 'mansao' },
+  { id: 'p13', label: 'Mansão com Campo de Futebol', price: 14000000, upkeep: 18000, locKey: 'mansao' },
+  { id: 'p14', label: 'Fazenda', price: 20000000, upkeep: 24000, locKey: 'mansao' },
+  { id: 'p15', label: 'Ilha Particular', price: 45000000, upkeep: 40000, locKey: 'mansao' },
+];
+
+const JEWELRY_CATALOG = [
+  { id: 'j1', name: 'Corrente de Prata', price: 15000 },
+  { id: 'j2', name: 'Relógio Tissot', price: 35000 },
+  { id: 'j3', name: 'Corrente de Ouro 18k', price: 60000 },
+  { id: 'j4', name: 'Anel de Diamante', price: 90000 },
+  { id: 'j5', name: 'Relógio Tag Heuer', price: 120000 },
+  { id: 'j6', name: 'Brincos de Diamante', price: 150000 },
+  { id: 'j7', name: 'Relógio Omega Speedmaster', price: 220000 },
+  { id: 'j8', name: 'Pulseira Cartier Love', price: 280000 },
+  { id: 'j9', name: 'Colar de Pérolas', price: 180000 },
+  { id: 'j10', name: 'Relógio Rolex Daytona', price: 450000 },
+  { id: 'j11', name: 'Anel de Rubi', price: 380000 },
+  { id: 'j12', name: 'Relógio Audemars Piguet', price: 750000 },
+  { id: 'j13', name: 'Colar de Esmeraldas', price: 900000 },
+  { id: 'j14', name: 'Relógio Patek Philippe', price: 1500000 },
+  { id: 'j15', name: 'Relógio Richard Mille', price: 3200000 },
+];
+
+const ELECTRONICS_CATALOG = [
+  { id: 'e1', name: 'AirPods Pro', price: 3000 },
+  { id: 'e2', name: 'iPhone Pro Max', price: 12000 },
+  { id: 'e3', name: 'Apple Watch Ultra', price: 8000 },
+  { id: 'e4', name: 'PlayStation 5', price: 5000 },
+  { id: 'e5', name: 'Xbox Series X', price: 4800 },
+  { id: 'e6', name: 'Notebook Gamer', price: 15000 },
+  { id: 'e7', name: 'MacBook Pro', price: 22000 },
+  { id: 'e8', name: 'iPad Pro', price: 10000 },
+  { id: 'e9', name: 'TV OLED 85 Polegadas', price: 35000 },
+  { id: 'e10', name: 'Home Theater Completo', price: 18000 },
+  { id: 'e11', name: 'Câmera Canon Profissional', price: 25000 },
+  { id: 'e12', name: 'Drone DJI', price: 12000 },
+  { id: 'e13', name: 'Óculos de Realidade Virtual', price: 9000 },
+  { id: 'e14', name: 'Estúdio de Som Profissional', price: 60000 },
+  { id: 'e15', name: 'Simulador de Corrida Completo', price: 40000 },
 ];
 
 function getPropertyCatalog(p) {
   const country = (p.club && p.club.country) || 'Brasil';
   const locs = PROPERTY_LOCATIONS[country] || DEFAULT_PROPERTY_LOCATIONS;
-  return PROPERTY_BASE.map(b => ({ id: b.id, name: `${b.label} em ${locs[b.id]}`, price: b.price, upkeep: b.upkeep }));
+  return PROPERTY_BASE.map(b => ({ id: b.id, name: `${b.label} em ${locs[b.locKey]}`, price: b.price, upkeep: b.upkeep }));
 }
 
 function cantAfford() { addLog('💸 Saldo insuficiente para essa compra.'); returnToHub(); }
@@ -2717,7 +2876,7 @@ function openVehicleMenu() {
     label: `🚗 ${v.name}`, sub: `${fmtMoney(v.price)} · manutenção ${fmtMoney(v.upkeep)}/semana`,
     onclick: p.money >= v.price ? `buyVehicle('${v.id}')` : 'cantAfford()',
   }));
-  choices.push({ label: 'Voltar', onclick: 'openBanco()' });
+  choices.push({ label: 'Voltar', onclick: 'openLoja()' });
   STATE.pendingEvent = {
     title: '🚗 Concessionária', stamp: 'DINHEIRO',
     body: [`Saldo: ${fmtMoney(p.money)}.`, p.vehicles.length ? `Garagem: ${p.vehicles.map(v => v.name).join(', ')}.` : 'Sua garagem está vazia.'],
@@ -2744,7 +2903,7 @@ function openPropertyMenu() {
     label: `🏠 ${pr.name}`, sub: `${fmtMoney(pr.price)} · manutenção ${fmtMoney(pr.upkeep)}/semana`,
     onclick: p.money >= pr.price ? `buyProperty('${pr.id}')` : 'cantAfford()',
   }));
-  choices.push({ label: 'Voltar', onclick: 'openBanco()' });
+  choices.push({ label: 'Voltar', onclick: 'openLoja()' });
   STATE.pendingEvent = {
     title: '🏠 Imobiliária', stamp: 'DINHEIRO',
     body: [`Saldo: ${fmtMoney(p.money)}.`, p.properties.length ? `Imóveis: ${p.properties.map(pr => pr.name).join(', ')}.` : 'Você ainda mora de aluguel.'],
@@ -2769,9 +2928,13 @@ function viewAssetsPanel() {
   const totalUpkeep = [...(p.vehicles || []), ...(p.properties || [])].reduce((s, x) => s + (x.upkeep || 0), 0);
   const vRows = (p.vehicles || []).map(v => `<div class="news-item">🚗 ${escapeHtml(v.name)} <span class="invest-detail">— ${fmtMoney(v.upkeep)}/semana</span></div>`).join('');
   const pRows = (p.properties || []).map(pr => `<div class="news-item">🏠 ${escapeHtml(pr.name)} <span class="invest-detail">— ${fmtMoney(pr.upkeep)}/semana</span></div>`).join('');
+  const jRows = (p.jewelry || []).map(j => `<div class="news-item">💎 ${escapeHtml(j.name)}</div>`).join('');
+  const eRows = (p.electronics || []).map(e => `<div class="news-item">📱 ${escapeHtml(e.name)}</div>`).join('');
   return `<div class="card"><div class="card-title">📄 Meus Bens e Contas</div>
     ${vRows || '<div class="news-item muted">Nenhum veículo.</div>'}
     ${pRows || '<div class="news-item muted">Nenhum imóvel.</div>'}
+    ${jRows}
+    ${eRows}
     <p class="hint-text">Total em manutenção: ${fmtMoney(totalUpkeep)}/semana, descontado automaticamente do seu salário.</p>
   </div>`;
 }
@@ -2855,7 +3018,10 @@ function toggleTrainingFocus(key) {
 
 function openCelular() {
   const p = STATE.player;
-  const choices = [{ label: '🏦 Banco', sub: `Saldo: ${fmtMoney(p.money)}`, onclick: 'openBanco()' }];
+  const choices = [
+    { label: '🏦 Banco', sub: `Saldo: ${fmtMoney(p.money)}`, onclick: 'openBanco()' },
+    { label: '🛍️ Loja', sub: 'Carros, imóveis, joias e eletrônicos', onclick: 'openLoja()' },
+  ];
   if (p.romance.status !== 'solteiro' && p.romance.partner) {
     choices.push({ label: `💑 ${p.romance.partner.name}`, sub: relationshipStatusLabel(p.romance.status), onclick: 'openPartnerInteract()' });
   } else if (p.age >= CONFIG.ROMANCE_MIN_AGE) {
@@ -2868,6 +3034,74 @@ function openCelular() {
   STATE.pendingEvent = { title: '📱 Celular', stamp: 'CELULAR', body: ['Seus aplicativos.'], choices };
   STATE.screen = 'event';
   persist(); render();
+}
+
+function openLoja() {
+  const p = STATE.player;
+  const choices = [
+    { label: '🚗 Carros', sub: `${VEHICLE_CATALOG.length} modelos disponíveis`, onclick: 'openVehicleMenu()' },
+    { label: '🏠 Imóveis', sub: `${PROPERTY_BASE.length} opções disponíveis`, onclick: 'openPropertyMenu()' },
+    { label: '💎 Joias', sub: `${JEWELRY_CATALOG.length} peças disponíveis`, onclick: 'openJewelryMenu()' },
+    { label: '📱 Eletrônicos', sub: `${ELECTRONICS_CATALOG.length} itens disponíveis`, onclick: 'openElectronicsMenu()' },
+    { label: 'Voltar', onclick: 'openCelular()' },
+  ];
+  STATE.pendingEvent = { title: '🛍️ Loja', stamp: 'DINHEIRO', body: [`Saldo: ${fmtMoney(p.money)}.`], choices };
+  STATE.screen = 'event';
+  persist(); render();
+}
+
+function openJewelryMenu() {
+  const p = STATE.player;
+  const choices = JEWELRY_CATALOG.map(j => ({
+    label: `💎 ${j.name}`, sub: fmtMoney(j.price),
+    onclick: p.money >= j.price ? `buyJewelry('${j.id}')` : 'cantAfford()',
+  }));
+  choices.push({ label: 'Voltar', onclick: 'openLoja()' });
+  STATE.pendingEvent = {
+    title: '💎 Joalheria', stamp: 'DINHEIRO',
+    body: [`Saldo: ${fmtMoney(p.money)}.`, (p.jewelry && p.jewelry.length) ? `Você tem: ${p.jewelry.map(j => j.name).join(', ')}.` : 'Nenhuma joia ainda.'],
+    choices,
+  };
+  STATE.screen = 'event'; persist(); render();
+}
+
+function buyJewelry(id) {
+  const p = STATE.player;
+  const j = JEWELRY_CATALOG.find(x => x.id === id);
+  if (!j || p.money < j.price) { cantAfford(); return; }
+  p.money -= j.price;
+  if (!Array.isArray(p.jewelry)) p.jewelry = [];
+  p.jewelry.push({ id: j.id + '-' + Date.now(), name: j.name });
+  p.morale = clamp(p.morale + 5, 0, 100);
+  addLog(`💎 Você comprou: ${j.name}!`);
+  returnToHub();
+}
+
+function openElectronicsMenu() {
+  const p = STATE.player;
+  const choices = ELECTRONICS_CATALOG.map(e => ({
+    label: `📱 ${e.name}`, sub: fmtMoney(e.price),
+    onclick: p.money >= e.price ? `buyElectronics('${e.id}')` : 'cantAfford()',
+  }));
+  choices.push({ label: 'Voltar', onclick: 'openLoja()' });
+  STATE.pendingEvent = {
+    title: '📱 Loja de Eletrônicos', stamp: 'DINHEIRO',
+    body: [`Saldo: ${fmtMoney(p.money)}.`, (p.electronics && p.electronics.length) ? `Você tem: ${p.electronics.map(e => e.name).join(', ')}.` : 'Nenhum eletrônico ainda.'],
+    choices,
+  };
+  STATE.screen = 'event'; persist(); render();
+}
+
+function buyElectronics(id) {
+  const p = STATE.player;
+  const e = ELECTRONICS_CATALOG.find(x => x.id === id);
+  if (!e || p.money < e.price) { cantAfford(); return; }
+  p.money -= e.price;
+  if (!Array.isArray(p.electronics)) p.electronics = [];
+  p.electronics.push({ id: e.id + '-' + Date.now(), name: e.name });
+  p.morale = clamp(p.morale + 3, 0, 100);
+  addLog(`📱 Você comprou: ${e.name}!`);
+  returnToHub();
 }
 
 const INVESTMENT_TYPES = {
@@ -2889,8 +3123,6 @@ function openBanco() {
     body: [`Saldo em conta: ${fmtMoney(p.money)}.`, portfolioValue > 0 ? `Carteira de investimentos: ${fmtMoney(Math.round(portfolioValue))}.` : 'Você ainda não tem investimentos.', totalUpkeep > 0 ? `Contas fixas: ${fmtMoney(totalUpkeep)}/semana.` : ''],
     choices: [
       { label: '📈 Investimentos', sub: 'Escolha onde aplicar seu dinheiro', onclick: 'openInvestMenu()' },
-      { label: '🚗 Concessionária', sub: 'Compre um carro', onclick: 'openVehicleMenu()' },
-      { label: '🏠 Imobiliária', sub: 'Compre uma casa ou apartamento', onclick: 'openPropertyMenu()' },
       { label: '📄 Meus bens e contas', sub: 'Veja tudo que você tem e paga', onclick: "openView('assets')" },
       { label: '❤️ Ajudar a família', sub: 'Moral e reputação com a torcida', onclick: "spendMoney('familia')" },
       { label: '🏋️ Treinamento particular', sub: 'Impulso extra num atributo forte', onclick: "spendMoney('treino')" },
@@ -3293,6 +3525,7 @@ function renderMenu() {
         <p class="menu-tag">"Você começa com uma bola, um campo de terra e um sonho. O resto depende de você."</p>
       </div>
       <button class="btn btn-gold btn-lg btn-block" onclick="newGameStart()">Nova Carreira</button>
+      ${STATE.saveAvailable ? '<button class="btn btn-outline btn-lg btn-block" style="margin-top:10px" onclick="continueSavedGame()">📂 Jogo Salvo</button>' : ''}
     </div>
   `;
 }
@@ -3453,6 +3686,7 @@ function renderBairroHub() {
   const p = STATE.player;
   return `
     ${STATE.saveFlash ? '<div class="save-toast">💾 Jogo salvo — pode fechar e continuar depois.</div>' : ''}
+    ${STATE.milestoneFlash ? `<div class="milestone-toast">${STATE.milestoneFlash}</div>` : ''}
     <div class="card next-match-card">
       <div class="card-title">⚽ VÁRZEA</div>
       <p class="hint-text" style="margin-bottom:10px">Jogo ${Math.min(p.bairro.matchesPlayed + 1, CONFIG.BAIRRO_MATCHES)} de ${CONFIG.BAIRRO_MATCHES} — o campeonato do bairro</p>
@@ -3477,6 +3711,7 @@ function renderBaseHub() {
   const status = p.squadStatus || 'titular';
   return `
     ${STATE.saveFlash ? '<div class="save-toast">💾 Jogo salvo — pode fechar e continuar depois.</div>' : ''}
+    ${STATE.milestoneFlash ? `<div class="milestone-toast">${STATE.milestoneFlash}</div>` : ''}
     <div class="card next-match-card">
       <div class="card-title">🏟️ BASE — ${escapeHtml(p.club.name)}</div>
       <p class="hint-text" style="margin-bottom:10px">Temporada ${p.base.seasonsDone + 1} · Semana ${t} de ${CONFIG.TURNS_PER_SEASON} · <span class="squad-badge status-${status}">${SQUAD_STATUS_LABEL[status]}</span></p>
@@ -3512,6 +3747,7 @@ function renderHub() {
 
   const inner = `
     ${STATE.saveFlash ? '<div class="save-toast">💾 Jogo salvo — pode fechar e continuar depois.</div>' : ''}
+    ${STATE.milestoneFlash ? `<div class="milestone-toast">${STATE.milestoneFlash}</div>` : ''}
     <div class="card next-match-card">
       <div class="card-title">PRÓXIMO JOGO</div>
       <div class="next-match-row">
@@ -3906,8 +4142,22 @@ function renderMatchMoment() {
   const pm = STATE.pendingMatch;
   const bm = pm.bigMoment;
   const roleIcon = { ataque: '⚽', meio: '🎯', defesa: '🛡️', goleiro: '🧤' }[bm.role];
-  const opts = bm.options.map((o, i) => `<button class="moment-btn" onclick="chooseBigMoment(${i})"><span class="moment-label">${o.label}</span><span class="moment-attr">${ATTR_LABELS[o.attr]}</span></button>`).join('');
   const progress = pm.chances.length > 1 ? `<div class="moment-progress">Chance ${pm.chanceIndex + 1} de ${pm.chances.length}</div>` : '';
+
+  if (bm.revealed) {
+    return renderShell(`
+      <div class="card card-moment">
+        <div class="moment-vs">vs ${escapeHtml(pm.opponentName)}</div>
+        ${progress}
+        <div class="moment-reveal-icon">${bm.success ? '⚽' : '❌'}</div>
+        <div class="moment-reveal ${bm.success ? 'success' : 'fail'}">${bm.success ? 'DEU CERTO!' : 'NÃO DESSA VEZ'}</div>
+        <p class="moment-text">${escapeHtml(pm.momentText)}</p>
+        <button class="btn btn-primary btn-block" onclick="continueAfterMoment()">Continuar</button>
+      </div>
+    `);
+  }
+
+  const opts = bm.options.map((o, i) => `<button class="moment-btn" onclick="chooseBigMoment(${i})"><span class="moment-label">${o.label}</span><span class="moment-attr">${ATTR_LABELS[o.attr]}</span></button>`).join('');
   return renderShell(`
     <div class="card card-moment">
       <div class="moment-vs">vs ${escapeHtml(pm.opponentName)}</div>
@@ -3931,10 +4181,21 @@ function renderPenalty() {
   const bm = pm.bigMoment;
   const isShooting = bm.penaltyRole === 'cobrando';
   const progress = pm.chances.length > 1 ? `<div class="moment-progress">Chance ${pm.chanceIndex + 1} de ${pm.chances.length}</div>` : '';
+  const revealed = !!bm.revealed;
+  const keeperPos = revealed ? PENALTY_ZONE_POS[bm.keeperZone] : null;
+  const keeperStyle = keeperPos
+    ? `top:${keeperPos.top}; left:${keeperPos.left}; bottom:auto; transform:translate(-50%,-50%) scale(1.15);`
+    : '';
   const zones = PENALTY_ZONES.map(z => {
     const pos = PENALTY_ZONE_POS[z];
-    return `<button class="pk-zone" style="top:${pos.top};left:${pos.left}" onclick="resolvePenalty('${z}')" aria-label="canto"><span class="pk-dot"></span></button>`;
+    const isBallHere = revealed && bm.myZone === z;
+    const onclick = revealed ? '' : `onclick="resolvePenalty('${z}')"`;
+    return `<button class="pk-zone ${revealed ? 'pk-zone-revealed' : ''}" style="top:${pos.top};left:${pos.left}" ${onclick} aria-label="canto">${isBallHere ? '<span class="pk-ball-dot">⚽</span>' : '<span class="pk-dot"></span>'}</button>`;
   }).join('');
+  const resultBanner = revealed
+    ? `<div class="pk-result ${bm.success ? 'success' : 'fail'}">${bm.scored ? '⚽ GOL!' : '🧤 DEFESA!'}</div><p class="moment-text">${escapeHtml(pm.momentText)}</p><button class="btn btn-primary btn-block" onclick="continueAfterPenalty()">Continuar</button>`
+    : `<div class="pk-ball">⚽</div><p class="pk-caption">ESCOLHA O CANTO</p>`;
+
   return renderShell(`
     <div class="card card-penalty">
       <div class="pk-tag">PÊNALTI!</div>
@@ -3944,15 +4205,14 @@ function renderPenalty() {
       <p class="pk-instruction">${isShooting ? '— SUA COBRANÇA — TOQUE ONDE MIRAR' : '— SUA DEFESA — TOQUE PARA ONDE PULAR'}</p>
       <div class="goal-frame">
         ${zones}
-        <div class="keeper-figure">
+        <div class="keeper-figure" style="${keeperStyle}">
           <div class="keeper-arm keeper-arm-l"></div>
           <div class="keeper-arm keeper-arm-r"></div>
           <div class="keeper-body"></div>
           <div class="keeper-head"></div>
         </div>
       </div>
-      <div class="pk-ball">⚽</div>
-      <p class="pk-caption">ESCOLHA O CANTO</p>
+      ${resultBanner}
     </div>
   `);
 }
@@ -4103,8 +4363,8 @@ function renderLegacy() {
 async function init() {
   const root = document.getElementById('root');
   if (root) root.innerHTML = '<div class="loading"><div class="loading-ball">⚽</div><p>Carregando...</p></div>';
-  const ok = await loadSave();
-  if (!ok) STATE = freshState();
+  STATE = freshState();
+  STATE.saveAvailable = await hasSave();
   render();
 }
 
