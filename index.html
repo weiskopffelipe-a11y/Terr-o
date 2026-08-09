@@ -337,6 +337,7 @@ input { font-family: var(--font-body); }
 
 .card-moment { text-align: center; }
 .moment-vs { font-family: var(--font-mono); font-size: 12px; color: var(--giz-dim); text-transform: uppercase; letter-spacing: 0.06em; }
+.moment-progress { font-family: var(--font-mono); font-size: 10px; color: var(--ouro); letter-spacing: 0.06em; margin-top: 4px; }
 .moment-icon { font-size: 40px; margin: 10px 0; }
 .moment-text { font-size: 16px; color: var(--giz); line-height: 1.5; margin-bottom: 18px; }
 .moment-options { display: flex; flex-direction: column; gap: 8px; }
@@ -446,7 +447,10 @@ input { font-family: var(--font-body); }
 .goal-frame {
   position: relative;
   width: 100%;
+  max-width: 340px;
+  max-height: 42vh;
   aspect-ratio: 4 / 3;
+  margin: 0 auto;
   background-color: var(--ink);
   background-image:
     linear-gradient(var(--linha) 1px, transparent 1px),
@@ -767,6 +771,15 @@ function genClubName(tier) {
   return pick(BR_CLUBS_BY_TIER[t] || BR_CLUBS_BY_TIER[1]);
 }
 
+function pickOpponentClub(p) {
+  const country = p.club && p.club.country;
+  if (!country || country === 'Brasil') return genClubName(p.club ? p.club.tier : 1);
+  const info = TRANSFER_CLUBS[country];
+  if (!info) return genClubName(p.club.tier);
+  const pool = info.clubs.filter(c => c !== p.club.name);
+  return pick(pool.length ? pool : info.clubs);
+}
+
 const TRANSFER_CLUBS = {
   /* América do Sul */
   'Argentina':        { clubs: ['Boca Juniors', 'River Plate', 'Racing Club', 'Independiente', 'San Lorenzo', 'Central Córdoba', 'Defensa y Justicia', 'Deportivo Riestra', 'Estudiantes', 'Gimnasia Mendoza', 'Instituto', 'Lanús', "Newell's Old Boys", 'Platense', 'Talleres', 'Vélez Sarsfield', 'Unión Santa Fe', 'Aldosivi', 'Argentinos Juniors', 'Atlético Tucumán', 'Banfield', 'Barracas Central', 'Belgrano', 'Gimnasia La Plata', 'Huracán', 'Independiente Rivadavia', 'Rosario Central', 'Sarmiento', 'Tigre'], tier: 4 },
@@ -784,7 +797,7 @@ const TRANSFER_CLUBS = {
   'Costa Rica':        { clubs: ['Saprissa', 'Alajuelense'], tier: 1 },
   'Canadá':            { clubs: ['Toronto FC', 'Vancouver Whitecaps'], tier: 2 },
   /* Europa */
-  'Portugal':          { clubs: ['Benfica', 'Porto', 'Sporting CP', 'Braga', 'Vitória de Guimarães'], tier: 5 },
+  'Portugal':          { clubs: ['Benfica', 'Porto', 'Sporting CP', 'Braga', 'Vitória de Guimarães', 'Alverca', 'Boavista', 'Famalicão'], tier: 5 },
   'Espanha':           { clubs: ['Real Madrid', 'Barcelona', 'Atlético de Madrid', 'Sevilla', 'Real Sociedad', 'Villarreal'], tier: 6 },
   'Itália':            { clubs: ['Juventus', 'Inter de Milão', 'AC Milan', 'Napoli', 'Roma', 'Atalanta'], tier: 6 },
   'Alemanha':          { clubs: ['Bayern de Munique', 'Borussia Dortmund', 'RB Leipzig', 'Bayer Leverkusen', 'Eintracht Frankfurt'], tier: 6 },
@@ -1331,6 +1344,20 @@ function generateBigMoment(p, importance) {
   return { role, importance, isPenalty: false, text: pick(texts), options };
 }
 
+function rollNumChances(importance) {
+  if (importance === 'final') return 1;
+  const r = Math.random();
+  let n;
+  if (r < 0.20) n = 0;
+  else if (r < 0.55) n = 1;
+  else if (r < 0.80) n = 2;
+  else if (r < 0.93) n = 3;
+  else if (r < 0.98) n = 4;
+  else n = 5;
+  if ((importance === 'marquee' || importance === 'debut') && n === 0) n = 1;
+  return n;
+}
+
 function beginMatch(opts) {
   const p = STATE.player;
   const myStrength = effectiveMatchStrength(p);
@@ -1347,18 +1374,27 @@ function beginMatch(opts) {
     oppGoalsTeam = poissony(clamp(1.1 - diff, 0.2, 3.4));
   }
 
-  const willHaveBigMoment = opts.importance !== 'normal' ? true : chance(0.4);
+  const numChances = rollNumChances(opts.importance);
+  const chances = [];
+  for (let i = 0; i < numChances; i++) chances.push(generateBigMoment(p, opts.importance));
 
   STATE.pendingMatch = {
     opponentName: opts.opponentName, importance: opts.importance,
     myGoalsTeam, oppGoalsTeam, myStrength, oppStrength,
-    playerGoals: 0, playerAssists: 0, bigMoment: null,
-    onResolve: opts.onResolve, context: opts.context || {}, ratingNote: 0,
+    playerGoals: 0, playerAssists: 0,
+    chances, chanceIndex: 0, momentResults: [], ratingNote: 0, bigMoment: null,
+    onResolve: opts.onResolve, context: opts.context || {},
   };
 
-  if (willHaveBigMoment) {
-    STATE.pendingMatch.bigMoment = generateBigMoment(p, opts.importance);
-    STATE.screen = STATE.pendingMatch.bigMoment.isPenalty ? 'penalty' : 'match-moment';
+  advanceToNextChance();
+}
+
+function advanceToNextChance() {
+  const pm = STATE.pendingMatch;
+  if (pm.chanceIndex < pm.chances.length) {
+    const bm = pm.chances[pm.chanceIndex];
+    pm.bigMoment = bm;
+    STATE.screen = bm.isPenalty ? 'penalty' : 'match-moment';
   } else {
     finishMatch();
     STATE.screen = 'match-result';
@@ -1372,33 +1408,33 @@ function applyBigMomentOutcome(pm, opt, success) {
     if (success) {
       pm.myGoalsTeam = pm.oppGoalsTeam + 1;
       if (opt.kind === 'assist') pm.playerAssists++; else pm.playerGoals++;
-      pm.ratingNote = 2.2;
+      pm.ratingNote += 2.2;
       pm.momentText = '🔥 Você vira o jogo nos minutos finais! Herói da decisão.';
     } else {
-      pm.ratingNote = -0.6;
+      pm.ratingNote -= 0.6;
       pm.momentText = 'A chance passa perto, mas não sai. O apito final confirma a derrota.';
     }
     return;
   }
   if (opt.kind === 'goal') {
-    if (success) { pm.playerGoals++; pm.myGoalsTeam++; pm.ratingNote = 1.4; pm.momentText = '⚽ GOL! Você balança a rede.'; }
-    else { pm.ratingNote = -0.3; pm.momentText = 'Você tenta, mas a bola não entra dessa vez.'; }
+    if (success) { pm.playerGoals++; pm.myGoalsTeam++; pm.ratingNote += 1.4; pm.momentText = '⚽ GOL! Você balança a rede.'; }
+    else { pm.ratingNote -= 0.3; pm.momentText = 'Você tenta, mas a bola não entra dessa vez.'; }
   } else if (opt.kind === 'assist') {
-    if (success) { pm.playerAssists++; pm.myGoalsTeam++; pm.ratingNote = 1.0; pm.momentText = '🎯 Assistência! O companheiro não perdoa.'; }
-    else { pm.ratingNote = -0.2; pm.momentText = 'O passe não encontra o companheiro certo.'; }
+    if (success) { pm.playerAssists++; pm.myGoalsTeam++; pm.ratingNote += 1.0; pm.momentText = '🎯 Assistência! O companheiro não perdoa.'; }
+    else { pm.ratingNote -= 0.2; pm.momentText = 'O passe não encontra o companheiro certo.'; }
   } else if (opt.kind === 'stop') {
     if (success) {
       if (pm.oppGoalsTeam > 0) pm.oppGoalsTeam--;
-      pm.ratingNote = 1.2;
+      pm.ratingNote += 1.2;
       pm.momentText = '🛡️ Intervenção decisiva! Você evita o gol adversário.';
     } else {
       pm.oppGoalsTeam++;
-      pm.ratingNote = -0.4;
+      pm.ratingNote -= 0.4;
       pm.momentText = 'Dessa vez o adversário leva a melhor.';
     }
   } else {
-    if (success) { pm.ratingNote = 0.5; pm.momentText = 'Decisão segura — você mantém o equilíbrio do time.'; }
-    else { pm.ratingNote = -0.1; pm.momentText = 'Não foi a melhor escolha, mas sem grandes danos.'; }
+    if (success) { pm.ratingNote += 0.5; pm.momentText = 'Decisão segura — você mantém o equilíbrio do time.'; }
+    else { pm.ratingNote -= 0.1; pm.momentText = 'Não foi a melhor escolha, mas sem grandes danos.'; }
   }
 }
 
@@ -1416,9 +1452,9 @@ function chooseBigMoment(optionIndex) {
   pm.bigMoment.chosenLabel = opt.label;
   pm.bigMoment.success = success;
   applyBigMomentOutcome(pm, opt, success);
-  finishMatch();
-  STATE.screen = 'match-result';
-  render();
+  pm.momentResults.push({ text: pm.momentText, success });
+  pm.chanceIndex++;
+  advanceToNextChance();
 }
 
 function pickKeeperZone() { return pick(PENALTY_ZONE_WEIGHTED); }
@@ -1448,30 +1484,32 @@ function resolvePenalty(myZone) {
 
   bm.myZone = myZone; bm.keeperZone = keeperZone; bm.matched = matched; bm.scored = scored;
   bm.chosenLabel = 'Pênalti';
+  let momentText;
 
   if (bm.penaltyRole === 'cobrando') {
     if (scored) {
-      pm.playerGoals++; pm.myGoalsTeam++; pm.ratingNote = 1.5; bm.success = true;
-      pm.momentText = matched ? '⚽ GOL, mesmo com o goleiro no canto certo! Categoria pura na cobrança.' : '⚽ GOL! O goleiro foi para o outro lado.';
+      pm.playerGoals++; pm.myGoalsTeam++; pm.ratingNote += 1.5; bm.success = true;
+      momentText = matched ? '⚽ GOL, mesmo com o goleiro no canto certo! Categoria pura na cobrança.' : '⚽ GOL! O goleiro foi para o outro lado.';
     } else {
-      pm.ratingNote = -0.5; bm.success = false;
-      pm.momentText = '🧤 DEFESA! O goleiro adivinhou o canto e espalmou a cobrança.';
+      pm.ratingNote -= 0.5; bm.success = false;
+      momentText = '🧤 DEFESA! O goleiro adivinhou o canto e espalmou a cobrança.';
     }
   } else {
     if (!scored) {
-      pm.ratingNote = 1.6; bm.success = true;
+      pm.ratingNote += 1.6; bm.success = true;
       if (pm.oppGoalsTeam > 0) pm.oppGoalsTeam--;
-      pm.momentText = matched ? '🧤 DEFESA! Você pulou para o canto certo e segurou.' : '🧤 Que reflexo! Você pegou a bola no susto.';
+      momentText = matched ? '🧤 DEFESA! Você pulou para o canto certo e segurou.' : '🧤 Que reflexo! Você pegou a bola no susto.';
     } else {
-      pm.ratingNote = -0.6; bm.success = false;
+      pm.ratingNote -= 0.6; bm.success = false;
       pm.oppGoalsTeam++;
-      pm.momentText = matched ? 'Você pulou certo, mas o chute foi forte demais para defender.' : 'Você pulou para o lado errado — gol do adversário.';
+      momentText = matched ? 'Você pulou certo, mas o chute foi forte demais para defender.' : 'Você pulou para o lado errado — gol do adversário.';
     }
   }
 
-  finishMatch();
-  STATE.screen = 'match-result';
-  render();
+  pm.momentText = momentText;
+  pm.momentResults.push({ text: momentText, success: bm.success });
+  pm.chanceIndex++;
+  advanceToNextChance();
 }
 
 function finishMatch() {
@@ -1498,13 +1536,13 @@ function finishMatch() {
   p.ratingHistory.push({ week: p.week, season: p.season, opponent: pm.opponentName, result: pm.result, myGoals: pm.myGoalsTeam, oppGoals: pm.oppGoalsTeam, rating: pm.rating, playerGoals: pm.playerGoals, playerAssists: pm.playerAssists });
   if (p.ratingHistory.length > 200) p.ratingHistory.shift();
 
-  p.fatigue = clamp(p.fatigue + rand(5, 10), 0, 100);
+  p.fatigue = clamp(p.fatigue + rand(3, 6), 0, 100);
   const resultDelta = pm.result === 'vitoria' ? rand(3, 7) : pm.result === 'empate' ? rand(-1, 2) : rand(-6, -2);
   const perfDelta = pm.rating >= 8 ? rand(3, 6) : pm.rating >= 6.5 ? rand(0, 2) : pm.rating >= 5 ? 0 : rand(-6, -3);
   const moraleDelta = resultDelta + perfDelta;
   p.morale = clamp(p.morale + moraleDelta, 0, 100);
 
-  let repGain = Math.round((pm.rating - 5) * 3.2);
+  let repGain = Math.round((pm.rating - 5) * 2.1);
   if (pm.importance === 'final') repGain += 12;
   if (pm.importance === 'marquee') repGain += 4;
   if (pm.importance === 'debut') repGain += 6;
@@ -1517,11 +1555,11 @@ function finishMatch() {
     if (p.attrs[k] < 96 || chance(0.15)) { growAttr(p, k, 1); pm.learnedAttr = k; }
   }
 
-  let injChance = 0.035 + (p.fatigue > 70 ? (p.fatigue - 70) / 300 : 0);
-  if (['ZC', 'VOL', 'CA', 'LD', 'LE'].includes(p.position)) injChance += 0.008;
-  if (p.position === 'GO') injChance -= 0.015;
-  if (pm.importance === 'final' || pm.importance === 'marquee') injChance += 0.01;
-  if (!p.injury && chance(clamp(injChance, 0.01, 0.3))) {
+  let injChance = 0.018 + (p.fatigue > 75 ? (p.fatigue - 75) / 400 : 0);
+  if (['ZC', 'VOL', 'CA', 'LD', 'LE'].includes(p.position)) injChance += 0.004;
+  if (p.position === 'GO') injChance -= 0.008;
+  if (pm.importance === 'final' || pm.importance === 'marquee') injChance += 0.006;
+  if (!p.injury && chance(clamp(injChance, 0.005, 0.18))) {
     triggerInjury('partida');
     pm.gotInjured = true;
   }
@@ -1542,10 +1580,16 @@ function continueAfterMatch() {
 
 /* =========================== 7. FASE: BAIRRO =========================== */
 
-function bairroPlayWeek() {
+function bairroPlayWeek(resting) {
   const p = STATE.player;
   if (p.injury) return; // segurança
-  applyAutomaticTraining(p);
+  if (resting) {
+    p.fatigue = clamp(p.fatigue - rand(30, 42), 0, 100);
+    p.morale = clamp(p.morale + rand(2, 5), 0, 100);
+    addLog('😴 Semana de descanso — fadiga aliviada.');
+  } else {
+    applyAutomaticTraining(p);
+  }
 
   const oppStrength = clamp(overallRating(p) + rand(-10, 8), 15, 70);
   p.bairro.matchesPlayed++;
@@ -1676,10 +1720,16 @@ function updateRivalForm() {
   p.rival.form = clamp(p.rival.form + rand(-3, 3), 20, 95);
 }
 
-function baseWeekAction() {
+function baseWeekAction(resting) {
   const p = STATE.player;
   if (p.injury) return;
-  applyAutomaticTraining(p);
+  if (resting) {
+    p.fatigue = clamp(p.fatigue - rand(30, 42), 0, 100);
+    p.morale = clamp(p.morale + rand(2, 5), 0, 100);
+    addLog('😴 Semana de descanso — fadiga aliviada.');
+  } else {
+    applyAutomaticTraining(p);
+  }
   p.week++;
   updateRivalForm();
   applyWeeklyPassives();
@@ -1691,7 +1741,8 @@ function baseWeekAction() {
     p.squadStatus = 'fora';
     addLog('📋 Moral lá embaixo: o técnico nem te relacionou pra esse jogo.');
     advanceFriendsRandom();
-    if (isSeasonFinal) { p.base.seasonsDone++; p.age++; finishBaseSeasonSummary(); }
+    if (p.flags.babyReady) { triggerChildBirth(); persist(); render(); return; }
+    if (isSeasonFinal) { p.base.seasonsDone++; p.age++; if (!checkAndQueueBirthday18(p, 'finishBaseSeasonSummary')) finishBaseSeasonSummary(); }
     else { STATE.screen = 'hub'; }
     persist(); render();
     return;
@@ -1727,12 +1778,37 @@ function continueBase() {
   if (isSeasonEnd) {
     p.base.seasonsDone++;
     p.age++;
-    finishBaseSeasonSummary();
+    if (!checkAndQueueBirthday18(p, 'finishBaseSeasonSummary')) finishBaseSeasonSummary();
   } else if (!maybeQueuePostMatchEvent(pm)) {
     STATE.screen = 'hub';
   }
   persist();
   render();
+}
+
+function checkAndQueueBirthday18(p, continuationFnName) {
+  if (p.age === 18 && !p.flags.turned18Announced) {
+    p.flags.turned18Announced = true;
+    STATE.pendingBirthdayContinuation = continuationFnName;
+    STATE.pendingEvent = {
+      title: '🎉 Você completou 18 anos!', stamp: 'CARREIRA',
+      body: ['Você alcançou a maioridade.', 'Isso desbloqueia:', '💘 O app "Encontre seu Amor" no Celular — agora dá pra namorar, noivar, casar e ter filhos.'],
+      choices: [{ label: 'Continuar', onclick: 'continueBirthday18()' }],
+    };
+    STATE.screen = 'event';
+    persist(); render();
+    return true;
+  }
+  return false;
+}
+
+function continueBirthday18() {
+  const fnName = STATE.pendingBirthdayContinuation;
+  STATE.pendingBirthdayContinuation = null;
+  STATE.pendingEvent = null;
+  if (fnName === 'finishBaseSeasonSummary') finishBaseSeasonSummary();
+  else if (fnName === 'finishProSeason') finishProSeason();
+  else { STATE.screen = 'hub'; persist(); render(); }
 }
 
 function finishBaseSeasonSummary() {
@@ -1894,25 +1970,35 @@ function applyAutomaticTraining(p) {
 
   ATTR_KEYS.forEach(k => {
     if (p.trainingFocus.includes(k)) return;
-    growWithDiminish(p, k, 0.13, mult);
+    growWithDiminish(p, k, 0.38, mult);
   });
 
-  p.fatigue = clamp(p.fatigue + rand(2, 5), 0, 100);
-  if (p.fatigue >= 92 && chance(0.04)) triggerInjury('sobrecarga de jogos e treinos');
+  p.fatigue = clamp(p.fatigue + rand(1, 3), 0, 100);
+  if (p.fatigue >= 94 && chance(0.02)) triggerInjury('sobrecarga de jogos e treinos');
   return { focusList: p.trainingFocus, gains };
 }
 
-function proWeekAction() {
+function proWeekAction(resting) {
   const p = STATE.player;
   if (p.injury) return;
-  const trainResult = applyAutomaticTraining(p);
+  let trainResult = null;
+  if (resting) {
+    p.fatigue = clamp(p.fatigue - rand(30, 42), 0, 100);
+    p.morale = clamp(p.morale + rand(2, 5), 0, 100);
+  } else {
+    trainResult = applyAutomaticTraining(p);
+  }
   p.week++;
   p.money += p.contract.salary;
   if (p.flags.passiveIncome) p.money += p.flags.passiveIncome;
   applyBillsAndUpkeep(p);
-  const gainedParts = trainResult.focusList.filter(k => trainResult.gains[k] > 0).map(k => `${ATTR_LABELS[k]} +${trainResult.gains[k]}`);
-  if (gainedParts.length) addLog(`💪 Treino: ${gainedParts.join(', ')}. 💰 Salário: ${fmtMoney(p.contract.salary)}.`);
-  else addLog(`💰 Salário recebido: ${fmtMoney(p.contract.salary)}.`);
+  if (resting) {
+    addLog(`😴 Semana de descanso — fadiga aliviada. 💰 Salário: ${fmtMoney(p.contract.salary)}.`);
+  } else {
+    const gainedParts = trainResult.focusList.filter(k => trainResult.gains[k] > 0).map(k => `${ATTR_LABELS[k]} +${trainResult.gains[k]}`);
+    if (gainedParts.length) addLog(`💪 Treino: ${gainedParts.join(', ')}. 💰 Salário: ${fmtMoney(p.contract.salary)}.`);
+    else addLog(`💰 Salário recebido: ${fmtMoney(p.contract.salary)}.`);
+  }
   applyWeeklyPassives();
 
   p.squadStatus = computeSquadStatus(p);
@@ -1922,7 +2008,8 @@ function proWeekAction() {
   if (p.squadStatus === 'fora') {
     addLog('📋 Moral baixa pesou: você nem foi relacionado para este jogo.');
     advanceFriendsRandom();
-    if (isSeasonFinal) { p.season++; p.age++; applyAgingEffects(); finishProSeason(); }
+    if (p.flags.babyReady) { triggerChildBirth(); persist(); render(); return; }
+    if (isSeasonFinal) { p.season++; p.age++; applyAgingEffects(); if (!checkAndQueueBirthday18(p, 'finishProSeason')) finishProSeason(); }
     else { STATE.screen = 'hub'; }
     persist(); render();
     return;
@@ -1932,7 +2019,7 @@ function proWeekAction() {
   const oppStrength = clamp(30 + p.club.tier * 10 + rand(-8, 10), 20, 96);
 
   beginMatch({
-    opponentName: genClubName(p.club.tier), opponentStrength: oppStrength,
+    opponentName: pickOpponentClub(p), opponentStrength: oppStrength,
     teamStrength: overallRating(p) + p.club.tier * 3 + rand(-4, 4) - (reduced ? 6 : 0),
     importance: isSeasonFinal ? 'final' : (chance(0.3) ? 'marquee' : 'normal'),
     onResolve: 'pro', context: { squadStatus: p.squadStatus },
@@ -1958,7 +2045,7 @@ function continuePro() {
     p.season++;
     p.age++;
     applyAgingEffects();
-    finishProSeason();
+    if (!checkAndQueueBirthday18(p, 'finishProSeason')) finishProSeason();
   } else if (!maybeQueuePostMatchEvent(pm)) {
     STATE.screen = 'hub';
   }
@@ -2062,6 +2149,17 @@ function openFriendInteract(idx) {
   const p = STATE.player;
   const f = p.friends[idx];
   if (!f) { STATE.screen = 'hub'; render(); return; }
+  const weeksSince = p.week - (f.lastInteractWeek == null ? -999 : f.lastInteractWeek);
+  if (weeksSince < 2) {
+    STATE.pendingEvent = {
+      title: f.name, stamp: 'AMIGOS',
+      body: ['Vocês já se falaram recentemente.', '"Volta aqui daqui uns dias — aproveita e cuida da sua vida também!"'],
+      choices: [{ label: 'Voltar', onclick: 'closeView()' }],
+    };
+    STATE.screen = 'event';
+    persist(); render();
+    return;
+  }
   const choices = [
     { label: '🎉 Ir a uma festa', sub: 'Sobe a moral, mas cansa um pouco', onclick: `friendAction(${idx},'festa')` },
     { label: '⚽ Jogar uma pelada', sub: 'De graça — e pode render um treino extra', onclick: `friendAction(${idx},'pelada')` },
@@ -2087,6 +2185,14 @@ function friendAction(idx, kind) {
   const f = p.friends[idx];
   if (!f) { returnToHub(); return; }
   if (f.closeness == null) f.closeness = 60;
+  f.lastInteractWeek = p.week;
+
+  const askKinds = ['festa', 'pelada', 'jogo'];
+  if (askKinds.includes(kind) && f.closeness < 30 && chance(0.45)) {
+    addLog(`😕 ${f.name} não topou dessa vez — vocês andam meio distantes ultimamente.`);
+    returnToHub();
+    return;
+  }
 
   if (kind === 'festa') {
     p.morale = clamp(p.morale + rand(6, 12), 0, 100);
@@ -2249,6 +2355,7 @@ function resolveSocialPost(tone) {
 function maybeQueuePostMatchEvent(pm) {
   const p = STATE.player;
   advanceFriendsRandom();
+  if (p.flags.babyReady) { triggerChildBirth(); return true; }
   if (pm.gotInjured) { queueInjuryEvent(); return true; }
   if (p.phase !== 'bairro' && pm.rating >= 7 && chance(p.phase === 'pro' ? 0.3 : 0.18)) { queueInterviewEvent(); return true; }
   if (p.phase === 'pro' && chance(0.16)) { queueSocialPostEvent(); return true; }
@@ -2258,6 +2365,14 @@ function maybeQueuePostMatchEvent(pm) {
     if (p.romance.status === 'noivo' && chance(0.06)) { queueWeddingEvent(); return true; }
   }
   return false;
+}
+
+function triggerChildBirth() {
+  const p = STATE.player;
+  p.flags.babyReady = false;
+  STATE.pendingEvent = null;
+  STATE.childNameDraft = { first: '', last: p.name.split(' ').slice(-1)[0] || '' };
+  STATE.screen = 'name-child';
 }
 
 /* ---- sequência pós-temporada: seleção / transferência / contrato / raízes / aposentadoria ---- */
@@ -2294,10 +2409,10 @@ function stepNationalCheck() {
   const p = STATE.player;
   const nt = p.nationalTeam;
   let called = false;
-  if (nt.level === 0 && p.reputation >= 110 && p.age <= 20) { nt.level = 1; called = true; }
-  else if (nt.level === 1 && p.reputation >= 260 && p.age <= 23) { nt.level = 2; called = true; }
-  else if (nt.level <= 2 && p.reputation >= 480) { nt.level = 3; called = true; }
-  else if (nt.level === 3 && chance(p.reputation >= 800 ? 0.7 : 0.4)) called = true;
+  if (nt.level === 0 && p.reputation >= 260 && p.age <= 20 && chance(0.5)) { nt.level = 1; called = true; }
+  else if (nt.level === 1 && p.reputation >= 480 && p.age <= 23 && chance(0.4)) { nt.level = 2; called = true; }
+  else if (nt.level <= 2 && p.reputation >= 900 && chance(0.35)) { nt.level = 3; called = true; }
+  else if (nt.level === 3 && chance(p.reputation >= 1400 ? 0.45 : 0.2)) called = true;
 
   if (!called) { runNextPostSeasonStep(); return; }
   const label = nt.level === 1 ? 'Sub-20' : nt.level === 2 ? 'Sub-23' : 'Principal';
@@ -2544,6 +2659,10 @@ function applyWeeklyPassives() {
   if (p.romance.partner) {
     p.romance.partner.happiness = clamp(p.romance.partner.happiness - randf(0.3, 0.8), 0, 100);
   }
+  if (p.romance.pregnancy) {
+    p.romance.pregnancy.dueInWeeks--;
+    if (p.romance.pregnancy.dueInWeeks <= 0) p.flags.babyReady = true;
+  }
 }
 
 function applyBillsAndUpkeep(p) {
@@ -2557,18 +2676,38 @@ function applyBillsAndUpkeep(p) {
 }
 
 const VEHICLE_CATALOG = [
-  { id: 'popular', name: 'Fiat Mobi', price: 45000, upkeep: 250 },
-  { id: 'sedan', name: 'Toyota Corolla', price: 120000, upkeep: 600 },
-  { id: 'suv', name: 'BMW X5', price: 320000, upkeep: 1400 },
-  { id: 'esportivo', name: 'Porsche 911', price: 850000, upkeep: 3500 },
-  { id: 'superesportivo', name: 'Lamborghini Huracán', price: 2200000, upkeep: 9000 },
+  { id: 'popular', name: 'Fiat Mobi', price: 110000, upkeep: 550 },
+  { id: 'sedan', name: 'Toyota Corolla', price: 280000, upkeep: 1300 },
+  { id: 'suv', name: 'BMW X5', price: 750000, upkeep: 3200 },
+  { id: 'esportivo', name: 'Porsche 911', price: 2000000, upkeep: 8000 },
+  { id: 'superesportivo', name: 'Lamborghini Huracán', price: 5500000, upkeep: 20000 },
 ];
-const PROPERTY_CATALOG = [
-  { id: 'apto', name: 'Apartamento em Moema, São Paulo', price: 180000, upkeep: 400 },
-  { id: 'casa', name: 'Casa em Alphaville, Barueri', price: 650000, upkeep: 1200 },
-  { id: 'cobertura', name: 'Cobertura nos Jardins, São Paulo', price: 1800000, upkeep: 3200 },
-  { id: 'mansao', name: 'Mansão em Angra dos Reis', price: 6000000, upkeep: 9500 },
+
+const PROPERTY_LOCATIONS = {
+  'Brasil':           { apto: 'Moema, São Paulo', casa: 'Alphaville, Barueri', cobertura: 'Jardins, São Paulo', mansao: 'Angra dos Reis' },
+  'Portugal':         { apto: 'Príncipe Real, Lisboa', casa: 'Cascais', cobertura: 'Avenida da Liberdade, Lisboa', mansao: 'Sintra' },
+  'Espanha':          { apto: 'Salamanca, Madrid', casa: 'Pozuelo de Alarcón', cobertura: 'Diagonal, Barcelona', mansao: 'Marbella' },
+  'Inglaterra':       { apto: 'Chelsea, Londres', casa: 'Alderley Edge', cobertura: 'Canary Wharf, Londres', mansao: 'Surrey' },
+  'Itália':           { apto: 'Brera, Milão', casa: 'Appiano Gentile', cobertura: 'Navigli, Milão', mansao: 'Como' },
+  'Alemanha':         { apto: 'Schwabing, Munique', casa: 'Grünwald', cobertura: 'Bogenhausen, Munique', mansao: 'Starnberg' },
+  'França':           { apto: 'Le Marais, Paris', casa: 'Neuilly-sur-Seine', cobertura: 'Champs-Élysées, Paris', mansao: 'Saint-Tropez' },
+  'Estados Unidos':   { apto: 'Brickell, Miami', casa: 'Weston, Flórida', cobertura: 'Manhattan, Nova York', mansao: 'Beverly Hills' },
+  'Argentina':        { apto: 'Palermo, Buenos Aires', casa: 'Nordelta', cobertura: 'Puerto Madero, Buenos Aires', mansao: 'Punta del Este' },
+  'Arábia Saudita':   { apto: 'Olaya, Riad', casa: 'Al Nakheel, Riad', cobertura: 'King Abdullah Financial District, Riad', mansao: 'Jeddah' },
+};
+const DEFAULT_PROPERTY_LOCATIONS = { apto: 'centro da cidade', casa: 'bairro nobre', cobertura: 'região central', mansao: 'zona litorânea' };
+const PROPERTY_BASE = [
+  { id: 'apto', label: 'Apartamento', price: 320000, upkeep: 700 },
+  { id: 'casa', label: 'Casa em condomínio', price: 1200000, upkeep: 2200 },
+  { id: 'cobertura', label: 'Cobertura', price: 3400000, upkeep: 5800 },
+  { id: 'mansao', label: 'Mansão', price: 11000000, upkeep: 16000 },
 ];
+
+function getPropertyCatalog(p) {
+  const country = (p.club && p.club.country) || 'Brasil';
+  const locs = PROPERTY_LOCATIONS[country] || DEFAULT_PROPERTY_LOCATIONS;
+  return PROPERTY_BASE.map(b => ({ id: b.id, name: `${b.label} em ${locs[b.id]}`, price: b.price, upkeep: b.upkeep }));
+}
 
 function cantAfford() { addLog('💸 Saldo insuficiente para essa compra.'); returnToHub(); }
 
@@ -2600,7 +2739,8 @@ function buyVehicle(id) {
 
 function openPropertyMenu() {
   const p = STATE.player;
-  const choices = PROPERTY_CATALOG.map(pr => ({
+  const catalog = getPropertyCatalog(p);
+  const choices = catalog.map(pr => ({
     label: `🏠 ${pr.name}`, sub: `${fmtMoney(pr.price)} · manutenção ${fmtMoney(pr.upkeep)}/semana`,
     onclick: p.money >= pr.price ? `buyProperty('${pr.id}')` : 'cantAfford()',
   }));
@@ -2615,7 +2755,7 @@ function openPropertyMenu() {
 
 function buyProperty(id) {
   const p = STATE.player;
-  const pr = PROPERTY_CATALOG.find(x => x.id === id);
+  const pr = getPropertyCatalog(p).find(x => x.id === id);
   if (!pr || p.money < pr.price) { cantAfford(); return; }
   p.money -= pr.price;
   p.properties.push({ id: pr.id + '-' + Date.now(), name: pr.name, upkeep: pr.upkeep });
@@ -2649,6 +2789,26 @@ function pickN(arr, n) {
 
 const ROMANCE_STATUS_LABEL = { solteiro: 'Solteiro(a)', namorando: 'Namorando', noivo: 'Noivo(a)', casado: 'Casado(a)' };
 function relationshipStatusLabel(s) { return ROMANCE_STATUS_LABEL[s] || s; }
+
+function confirmRestPrompt() {
+  STATE.pendingEvent = {
+    title: '😴 Descansar', stamp: 'TREINO',
+    body: ['"Você irá descansar, isso abaixará sua fadiga, porém você não vai treinar na semana."'],
+    choices: [
+      { label: 'Confirmar', onclick: 'doRestConfirmed()' },
+      { label: 'Cancelar', onclick: 'returnToHub()' },
+    ],
+  };
+  STATE.screen = 'event';
+  persist(); render();
+}
+
+function doRestConfirmed() {
+  const p = STATE.player;
+  if (p.phase === 'pro') proWeekAction(true);
+  else if (p.phase === 'base') baseWeekAction(true);
+  else bairroPlayWeek(true);
+}
 
 function openTrainingMenu() {
   const p = STATE.player;
@@ -2867,23 +3027,25 @@ function openPartnerInteract() {
   const p = STATE.player;
   const partner = p.romance.partner;
   if (!partner) { openCelular(); return; }
+  const pregnancy = p.romance.pregnancy;
   const choices = [
-    { label: '🍽️ Sair para jantar', sub: 'Custa dinheiro, mas sobe bastante a felicidade', onclick: "partnerAction('jantar')" },
+    { label: '🍽️ Sair para jantar', sub: 'Custa dinheiro, mas sobe a felicidade', onclick: "partnerAction('jantar')" },
     { label: '🌅 Passar o dia juntos', sub: 'De graça — momento de qualidade', onclick: "partnerAction('dia')" },
     { label: '🎁 Dar um presente', sub: 'Custa dinheiro, felicidade garantida', onclick: "partnerAction('presente')" },
     { label: '💬 Conversar sobre a carreira', sub: 'Ela te apoia nos seus planos', onclick: "partnerAction('conversar')" },
   ];
   if (p.romance.status === 'namorando') choices.push({ label: '💍 Pedir em noivado', onclick: 'proposeMarriage()' });
   if (p.romance.status === 'noivo') choices.push({ label: '💒 Marcar o casamento', onclick: 'finalizeWedding()' });
-  if (p.romance.status === 'casado' && partner.happiness >= 100) {
-    choices.push({ label: '👶 Ter um filho', sub: 'Um novo capítulo pra família', onclick: 'haveChild()' });
+  if (p.romance.status === 'casado' && !pregnancy && partner.happiness >= 100) {
+    choices.push({ label: '👶 Tentar ter um filho', sub: 'Um novo capítulo pra família', onclick: 'haveChild()' });
   }
   choices.push({ label: '💔 Terminar o relacionamento', onclick: "partnerAction('terminar')" });
   choices.push({ label: 'Voltar', onclick: 'openCelular()' });
 
-  const childrenLine = (p.children && p.children.length) ? `Filhos: ${p.children.map(c => c.name).join(', ')}.` : (p.romance.status === 'casado' ? 'A felicidade dela precisa estar no máximo (100) para pensarem em ter filhos.' : '');
   const body = [`${relationshipStatusLabel(p.romance.status)} · ${partner.quality}`, `Felicidade: ${Math.round(partner.happiness)}/100`];
-  if (childrenLine) body.push(childrenLine);
+  if (pregnancy) body.push(`🤰 Grávida — faltam ${pregnancy.dueInWeeks} semana(s) para o nascimento.`);
+  else if (p.children && p.children.length) body.push(`Filhos: ${p.children.map(c => c.name).join(', ')}.`);
+  else if (p.romance.status === 'casado') body.push('A felicidade dela precisa estar no máximo (100) para pensarem em ter filhos.');
 
   STATE.pendingEvent = { title: `💑 ${partner.name}`, stamp: 'AMOR', body, choices };
   STATE.screen = 'event';
@@ -2893,14 +3055,44 @@ function openPartnerInteract() {
 function haveChild() {
   const p = STATE.player;
   const partner = p.romance.partner;
-  if (!partner || p.romance.status !== 'casado' || partner.happiness < 100) { returnToHub(); return; }
-  if (!Array.isArray(p.children)) p.children = [];
-  const childName = randomName(chance(0.5) ? 'm' : 'f');
-  p.children.push({ name: childName, bornAge: p.age, bornSeason: p.season });
-  partner.happiness = clamp(partner.happiness - 25, 0, 100);
-  p.morale = clamp(p.morale + 20, 0, 100);
-  addLog(`👶 Nasceu ${childName}! ${p.name} e ${partner.name} agora são pais.`);
+  if (!partner || p.romance.status !== 'casado' || partner.happiness < 100 || p.romance.pregnancy) { returnToHub(); return; }
+  p.romance.pregnancy = { dueInWeeks: rand(6, 9) };
+  partner.happiness = clamp(partner.happiness - 15, 0, 100);
+  p.morale = clamp(p.morale + 10, 0, 100);
+  addLog(`🤰 Vocês estão esperando um bebê! ${partner.name} está grávida.`);
   returnToHub();
+}
+
+function renderNameChild() {
+  const draft = STATE.childNameDraft || { first: '', last: '' };
+  return renderShell(`
+    <div class="card">
+      <div class="card-title">👶 Chegou a hora!</div>
+      <p style="margin-bottom:14px">O bebê nasceu! Escolha o primeiro nome e o sobrenome dele(a).</p>
+      <label class="field-label">Primeiro nome</label>
+      <input class="text-input" type="text" maxlength="20" value="${escapeHtml(draft.first)}" oninput="STATE.childNameDraft.first=this.value" placeholder="Nome">
+      <label class="field-label">Sobrenome</label>
+      <input class="text-input" type="text" maxlength="20" value="${escapeHtml(draft.last)}" oninput="STATE.childNameDraft.last=this.value" placeholder="Sobrenome">
+      <button class="btn btn-gold btn-block" style="margin-top:18px" onclick="confirmChildName()">Confirmar nome</button>
+    </div>
+  `);
+}
+
+function confirmChildName() {
+  const p = STATE.player;
+  const draft = STATE.childNameDraft || {};
+  const first = (draft.first || '').trim() || pick(['Miguel', 'Helena', 'Davi', 'Alice', 'Noah', 'Laura']);
+  const last = (draft.last || '').trim() || (p.name.split(' ').slice(-1)[0] || '');
+  const fullName = `${first} ${last}`.trim();
+  if (!Array.isArray(p.children)) p.children = [];
+  p.children.push({ name: fullName, bornAge: p.age, bornSeason: p.season });
+  p.romance.pregnancy = null;
+  if (p.romance.partner) p.romance.partner.happiness = clamp(p.romance.partner.happiness - 10, 0, 100);
+  p.morale = clamp(p.morale + 20, 0, 100);
+  addLog(`👶 Nasceu ${fullName}! A família aumentou.`);
+  STATE.childNameDraft = null;
+  STATE.screen = 'hub';
+  persist(); render();
 }
 
 function partnerAction(kind) {
@@ -2910,20 +3102,20 @@ function partnerAction(kind) {
   if (kind === 'jantar') {
     const cost = Math.min(p.money, rand(150, 500));
     p.money -= cost;
-    partner.happiness = clamp(partner.happiness + rand(12, 20), 0, 100);
+    partner.happiness = clamp(partner.happiness + rand(6, 10), 0, 100);
     p.morale = clamp(p.morale + rand(4, 8), 0, 100);
     addLog(`🍽️ Jantar romântico com ${partner.name} (${fmtMoney(cost)}).`);
   } else if (kind === 'dia') {
-    partner.happiness = clamp(partner.happiness + rand(8, 14), 0, 100);
+    partner.happiness = clamp(partner.happiness + rand(4, 7), 0, 100);
     p.morale = clamp(p.morale + rand(3, 7), 0, 100);
     addLog('🌅 Vocês passaram o dia juntos, sem pressa.');
   } else if (kind === 'presente') {
     const cost = Math.min(p.money, rand(300, 1500));
     p.money -= cost;
-    partner.happiness = clamp(partner.happiness + rand(15, 25), 0, 100);
+    partner.happiness = clamp(partner.happiness + rand(8, 14), 0, 100);
     addLog(`🎁 Você deu um presente especial pra ${partner.name} (${fmtMoney(cost)}).`);
   } else if (kind === 'conversar') {
-    partner.happiness = clamp(partner.happiness + rand(5, 10), 0, 100);
+    partner.happiness = clamp(partner.happiness + rand(3, 6), 0, 100);
     p.morale = clamp(p.morale + rand(2, 5), 0, 100);
     addLog('💬 Vocês conversaram sobre seus planos de carreira.');
   } else if (kind === 'terminar') {
@@ -2983,10 +3175,19 @@ function queueProposalEvent() {
 
 function proposeMarriage() {
   const p = STATE.player;
+  const partner = p.romance.partner;
+  const refuseChance = clamp(0.65 - partner.happiness / 130, 0.03, 0.7);
+  if (chance(refuseChance)) {
+    partner.happiness = clamp(partner.happiness - rand(5, 12), 0, 100);
+    p.morale = clamp(p.morale - rand(5, 10), 0, 100);
+    addLog(`💔 ${partner.name} disse que ainda não é a hora. O pedido pegou ela de surpresa.`);
+    returnToHub();
+    return;
+  }
   p.romance.status = 'noivo';
-  p.romance.partner.happiness = clamp(p.romance.partner.happiness + 20, 0, 100);
+  partner.happiness = clamp(partner.happiness + 20, 0, 100);
   p.morale = clamp(p.morale + 15, 0, 100);
-  addLog(`💍 Pedido de noivado aceito! Você e ${p.romance.partner.name} estão noivos.`);
+  addLog(`💍 Pedido de noivado aceito! Você e ${partner.name} estão noivos.`);
   returnToHub();
 }
 
@@ -3032,6 +3233,7 @@ function render() {
     case 'hub': html = renderHub(); break;
     case 'view': html = renderView(); break;
     case 'offers': html = renderOffers(); break;
+    case 'name-child': html = renderNameChild(); break;
     case 'match-moment': html = renderMatchMoment(); break;
     case 'penalty': html = renderPenalty(); break;
     case 'dating': html = renderDatingApp(); break;
@@ -3235,6 +3437,13 @@ const HUB_SHORTCUTS = [
   { icon: '📖', label: 'Minha carreira', fn: "openView('career')" },
 ];
 
+function getHubShortcuts(p) {
+  if (p.romance.status === 'solteiro') return HUB_SHORTCUTS;
+  const list = HUB_SHORTCUTS.slice();
+  list.splice(2, 0, { icon: '👨‍👩‍👧', label: 'Família', fn: "openView('family')" });
+  return list;
+}
+
 function renderFocusMeters(p) {
   const list = Array.isArray(p.trainingFocus) && p.trainingFocus.length ? p.trainingFocus : [pickDefaultFocus(p)];
   return list.map(k => `<div class="meter-row"><span>🎯 ${ATTR_LABELS[k]}</span><div class="bar"><div class="bar-fill fill-tec" style="width:${p.attrs[k]}%"></div></div><b>${p.attrs[k]}</b></div>`).join('');
@@ -3250,6 +3459,7 @@ function renderBairroHub() {
       <div class="meter-row"><span>Fadiga</span><div class="bar"><div class="bar-fill fill-fadiga" style="width:${p.fatigue}%"></div></div><b>${p.fatigue}%</b></div>
       ${renderFocusMeters(p)}
       <button class="btn btn-gold btn-block" onclick="bairroPlayWeek()">▶️ Jogar a próxima pelada</button>
+      <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="confirmRestPrompt()">😴 Descansar</button>
     </div>
     <div class="quick-row">
       <button class="btn btn-outline btn-sm" onclick="openView('attrs')">📊 Atributos</button>
@@ -3273,6 +3483,7 @@ function renderBaseHub() {
       <div class="meter-row"><span>Fadiga</span><div class="bar"><div class="bar-fill fill-fadiga" style="width:${p.fatigue}%"></div></div><b>${p.fatigue}%</b></div>
       ${renderFocusMeters(p)}
       <button class="btn btn-gold btn-block" onclick="baseWeekAction()">▶️ Avançar até o jogo</button>
+      <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="confirmRestPrompt()">😴 Descansar</button>
     </div>
     <div class="quick-row">
       <button class="btn btn-outline btn-sm" onclick="openView('attrs')">📊 Atributos</button>
@@ -3292,12 +3503,12 @@ function renderHub() {
   if (p.phase === 'base') return renderShell(renderBaseHub());
   if (!p.club) return renderShell('<div class="card"><p>Carregando propostas...</p></div>');
 
-  if (!p.nextOpponentPreview) p.nextOpponentPreview = genClubName(p.club.tier);
+  if (!p.nextOpponentPreview) p.nextOpponentPreview = pickOpponentClub(p);
   const nextOpp = p.nextOpponentPreview;
   const t = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
   const status = p.squadStatus || 'titular';
 
-  const shortcutBtns = HUB_SHORTCUTS.map(s => `<button class="shortcut-btn" onclick="${s.fn}"><span class="shortcut-icon">${s.icon}</span><span class="shortcut-label">${s.label}</span></button>`).join('');
+  const shortcutBtns = getHubShortcuts(p).map(s => `<button class="shortcut-btn" onclick="${s.fn}"><span class="shortcut-icon">${s.icon}</span><span class="shortcut-label">${s.label}</span></button>`).join('');
 
   const inner = `
     ${STATE.saveFlash ? '<div class="save-toast">💾 Jogo salvo — pode fechar e continuar depois.</div>' : ''}
@@ -3311,6 +3522,7 @@ function renderHub() {
       <div class="next-match-names"><span>${escapeHtml(p.club.name)}</span><span>${escapeHtml(nextOpp)}</span></div>
       <div class="next-match-meta">Rodada ${t} de ${CONFIG.TURNS_PER_SEASON} · Temporada ${p.season} · <span class="squad-badge status-${status}">${SQUAD_STATUS_LABEL[status]}</span></div>
       <button class="btn btn-gold btn-block" onclick="proWeekAction()">▶️ Avançar até o jogo</button>
+      <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="confirmRestPrompt()">😴 Descansar</button>
     </div>
     <div class="card">
       <div class="card-title">CONDIÇÃO</div>
@@ -3350,6 +3562,7 @@ function renderView() {
     portfolio: viewPortfolioPanel, assets: viewAssetsPanel, player: viewPlayerPanel, calendar: viewCalendarPanel,
     performance: viewPerformancePanel, standings: viewStandingsPanel, interest: viewInterestPanel,
     evolution: viewEvolutionPanel, goals: viewGoalsPanel, medical: viewMedicalPanel, contract: viewContractPanel,
+    family: viewFamilyPanel,
   };
   const fn = panelMap[panel];
   const inner = fn ? fn() : '<div class="card"><p>Painel não encontrado.</p></div>';
@@ -3496,7 +3709,7 @@ function viewCalendarPanel() {
     const resIcon = m.result === 'vitoria' ? '✅' : m.result === 'empate' ? '➖' : '❌';
     return `<div class="cal-row"><span>${resIcon} vs ${escapeHtml(m.opponent)}</span><span>${m.myGoals} × ${m.oppGoals}</span></div>`;
   }).join('') || '<div class="news-item muted">Nenhuma partida disputada ainda.</div>';
-  const nextOpp = p.nextOpponentPreview || (p.club ? genClubName(p.club.tier) : '—');
+  const nextOpp = p.nextOpponentPreview || (p.club ? pickOpponentClub(p) : '—');
   return `<div class="card"><div class="card-title">📅 Calendário</div>
     <div class="cal-next"><span>Próximo jogo</span><b>${escapeHtml(nextOpp)}</b></div>
     <div class="card-title" style="margin-top:14px">Últimos resultados</div>${rows}
@@ -3516,7 +3729,11 @@ function viewPerformancePanel() {
 /* ---- 🏆 classificação ---- */
 
 function generateStandingsTable(p) {
-  const tierClubs = (BR_CLUBS_BY_TIER[p.club.tier] || []).filter(n => n !== p.club.name);
+  const country = p.club.country;
+  const pool = (!country || country === 'Brasil')
+    ? (BR_CLUBS_BY_TIER[p.club.tier] || [])
+    : ((TRANSFER_CLUBS[country] && TRANSFER_CLUBS[country].clubs) || []);
+  const tierClubs = pool.filter(n => n !== p.club.name);
   const rivals = pickN(tierClubs, Math.min(9, tierClubs.length));
   const ss = p.seasonStats;
   const myPts = (ss.wins || 0) * 3 + (ss.draws || 0);
@@ -3536,7 +3753,8 @@ function viewStandingsPanel() {
   const p = STATE.player;
   const table = generateStandingsTable(p);
   const rows = table.map((t, i) => `<div class="standing-row ${t.isMe ? 'standing-me' : ''}"><span class="standing-pos">${i + 1}º</span>${crestImg(t.name, 20)}<span class="standing-name">${escapeHtml(t.name)}</span><span class="standing-pts">${t.pts} pts</span></div>`).join('');
-  return `<div class="card"><div class="card-title">🏆 Classificação — Série ${CLUB_TIERS[p.club.tier].division}</div>${rows}<p class="hint-text">Tabela estimada a partir do seu desempenho na temporada.</p></div>`;
+  const leagueName = (!p.club.country || p.club.country === 'Brasil') ? `Série ${CLUB_TIERS[p.club.tier].division}` : escapeHtml(p.club.country);
+  return `<div class="card"><div class="card-title">🏆 Classificação — ${leagueName}</div>${rows}<p class="hint-text">Tabela estimada a partir do seu desempenho na temporada.</p></div>`;
 }
 
 /* ---- 🔄 transferências: interesse ---- */
@@ -3621,6 +3839,24 @@ function viewContractPanel() {
   </div>`;
 }
 
+function viewFamilyPanel() {
+  const p = STATE.player;
+  const partner = p.romance.partner;
+  if (!partner) return `<div class="card"><div class="card-title">👨‍👩‍👧 Família</div><p class="hint-text">Você ainda não tem uma família formada.</p></div>`;
+  const childRows = (p.children || []).map(c => `<div class="news-item">👶 ${escapeHtml(c.name)} <span class="invest-detail">— nasceu aos seus ${c.bornAge} anos</span></div>`).join('') || '<div class="news-item muted">Nenhum filho ainda.</div>';
+  const pregnancyLine = p.romance.pregnancy ? `<div class="offer-quote">🤰 ${escapeHtml(partner.name)} está grávida — faltam ${p.romance.pregnancy.dueInWeeks} semana(s).</div>` : '';
+  return `<div class="card">
+    <div class="card-title">👨‍👩‍👧 Família</div>
+    <div class="attr-row"><span class="attr-name">${relationshipStatusLabel(p.romance.status)}</span><span class="offer-line-val">${escapeHtml(partner.name)}</span></div>
+    <div class="attr-row"><span class="attr-name">Idade dela</span><span class="offer-line-val">${partner.age}</span></div>
+    <div class="attr-row"><span class="attr-name">Felicidade</span><span class="offer-line-val">${Math.round(partner.happiness)}/100</span></div>
+    ${pregnancyLine}
+    <div class="card-title" style="margin-top:14px">Filhos</div>
+    ${childRows}
+    <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="openPartnerInteract()">💑 Interagir</button>
+  </div>`;
+}
+
 /* ---- partida ---- */
 
 /* ---- propostas (contrato inicial e transferências) ---- */
@@ -3671,9 +3907,11 @@ function renderMatchMoment() {
   const bm = pm.bigMoment;
   const roleIcon = { ataque: '⚽', meio: '🎯', defesa: '🛡️', goleiro: '🧤' }[bm.role];
   const opts = bm.options.map((o, i) => `<button class="moment-btn" onclick="chooseBigMoment(${i})"><span class="moment-label">${o.label}</span><span class="moment-attr">${ATTR_LABELS[o.attr]}</span></button>`).join('');
+  const progress = pm.chances.length > 1 ? `<div class="moment-progress">Chance ${pm.chanceIndex + 1} de ${pm.chances.length}</div>` : '';
   return renderShell(`
     <div class="card card-moment">
       <div class="moment-vs">vs ${escapeHtml(pm.opponentName)}</div>
+      ${progress}
       <div class="moment-icon">${roleIcon}</div>
       <p class="moment-text">${escapeHtml(bm.text)}</p>
       <div class="moment-options">${opts}</div>
@@ -3692,6 +3930,7 @@ function renderPenalty() {
   const pm = STATE.pendingMatch;
   const bm = pm.bigMoment;
   const isShooting = bm.penaltyRole === 'cobrando';
+  const progress = pm.chances.length > 1 ? `<div class="moment-progress">Chance ${pm.chanceIndex + 1} de ${pm.chances.length}</div>` : '';
   const zones = PENALTY_ZONES.map(z => {
     const pos = PENALTY_ZONE_POS[z];
     return `<button class="pk-zone" style="top:${pos.top};left:${pos.left}" onclick="resolvePenalty('${z}')" aria-label="canto"><span class="pk-dot"></span></button>`;
@@ -3700,6 +3939,7 @@ function renderPenalty() {
     <div class="card card-penalty">
       <div class="pk-tag">PÊNALTI!</div>
       <div class="pk-sub">vs ${escapeHtml(pm.opponentName)}</div>
+      ${progress}
       <p class="pk-text">${escapeHtml(bm.text)}</p>
       <p class="pk-instruction">${isShooting ? '— SUA COBRANÇA — TOQUE ONDE MIRAR' : '— SUA DEFESA — TOQUE PARA ONDE PULAR'}</p>
       <div class="goal-frame">
@@ -3770,10 +4010,7 @@ function renderMatchResult() {
   const pm = STATE.pendingMatch;
   const resultLabel = { vitoria: 'VITÓRIA', empate: 'EMPATE', derrota: 'DERROTA' }[pm.result];
   const resultClass = { vitoria: 'result-win', empate: 'result-draw', derrota: 'result-loss' }[pm.result];
-  let momentBlock = '';
-  if (pm.bigMoment && pm.bigMoment.chosenLabel) {
-    momentBlock = `<div class="moment-recap ${pm.bigMoment.success ? 'success' : 'fail'}">${escapeHtml(pm.momentText)}</div>`;
-  }
+  const momentBlock = (pm.momentResults || []).map(m => `<div class="moment-recap ${m.success ? 'success' : 'fail'}">${escapeHtml(m.text)}</div>`).join('');
   const statLine = [];
   if (pm.playerGoals) statLine.push(`⚽ ${pm.playerGoals} gol(s)`);
   if (pm.playerAssists) statLine.push(`🎯 ${pm.playerAssists} assist.`);
