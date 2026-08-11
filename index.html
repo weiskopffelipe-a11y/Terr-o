@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>Do Terrão ao Profissional</title>
+<title>Camisa 10</title>
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
 
@@ -669,7 +669,7 @@ input { font-family: var(--font-body); }
 <script>
 'use strict';
 /* =========================================================================
-   DO TERRÃO AO PROFISSIONAL — motor do jogo (vanilla JS, single file)
+   CAMISA 10 — motor do jogo (vanilla JS, single file)
    ---------------------------------------------------------------------
    Seções:
     1. CONFIG & DADOS (posições, estilos, personalidades, nomes, clubes...)
@@ -780,8 +780,8 @@ const FRIEND_PATH_LABEL = {
 };
 
 const BR_CLUBS_BY_TIER = {
-  1: ['São Raimundo-RR', 'Rio Branco-AC', 'Galvez-AC', 'Trem-AP', 'Princesa do Solimões-AM', 'Tuna Luso-PA', 'Moto Club-MA', 'ASA-AL', 'Confiança-SE', 'Treze-PB', 'Nacional-AM', 'Penarol-AC', 'Castanhal-PA', 'Murici-AL'],
-  2: ['Paysandu', 'Botafogo-PB', 'Sampaio Corrêa', 'Ferroviária', 'Ituano', 'Tombense', 'Caxias', 'Brusque', 'ABC', 'América-RN', 'Guarani', 'Figueirense', 'Ypiranga-RS', 'Manaus FC', 'Retrô'],
+  1: ['São Raimundo-RR', 'Porto Velho', 'Brasiliense', 'Gama', 'Capital-DF', 'Águia-PA', 'Iguatu', 'Altos', 'ABC', 'América-RN', 'Treze', 'Juazeirense', 'Uberlândia', 'Tombense', 'Portuguesa', 'Madureira', 'Nova Iguaçu', 'Joinville', 'GE Brasil', 'São José-RS'],
+  2: ['Amazonas FC', 'Anápolis', 'Caxias', 'Confiança', 'Guarani', 'Inter de Limeira', 'Grêmio Maringá', 'Paysandu', 'Santa Cruz', 'Volta Redonda', 'Itabaiana', 'Ituano', 'Ferroviária', 'Figueirense', 'Barra-SC', 'Botafogo-PB', 'Brusque', 'Floresta-CE', 'Maranhão', 'Ypiranga-RS'],
   3: ['América-MG', 'Atlético del Rey-MG', 'Atlético-GO', 'Avaí', 'Botafogo-SP', 'Ceará', 'CRB', 'Criciúma', 'Cuiabá', 'Goiás', 'Grêmio Novorizontino', 'Fortaleza', 'Juventude', 'Londrina', 'Náutico', 'Operário-PR', 'Ponte Preta', 'São Bernardo', 'Sport', 'Vila Nova'],
   4: ['Athletico Paranaense', 'Atlético-MG', 'Bahia', 'Botafogo', 'Chapecoense', 'Corinthians', 'Coritiba', 'Cruzeiro', 'Flamengo', 'Fluminense', 'Grêmio', 'Internacional', 'Mirassol', 'Palmeiras', 'Red Bull Bragantino', 'Remo', 'Santos', 'São Paulo', 'Vasco da Gama', 'Vitória'],
 };
@@ -811,18 +811,17 @@ const TRANSFER_CLUBS = {
   'Bolívia':           { clubs: ['Bolívar', 'The Strongest'], tier: 1 },
   'Venezuela':         { clubs: ['Deportivo Táchira', 'Caracas FC'], tier: 1 },
   /* América do Norte e Central */
-  'México':            { clubs: ['Club América', 'Chivas de Guadalajara', 'Cruz Azul', 'Monterrey', 'Tigres UANL'], tier: 4 },
+  'México':            { clubs: ['América', 'Atlante', 'Atlas', 'Atlético San Luis', 'Chivas de Guadalajara', 'Cruz Azul', 'FC Juárez', 'León', 'Monterrey', 'Necaxa', 'Santos Laguna', 'Universidad de Guadalajara', 'Querétaro', 'Puebla', 'Pachuca', 'Tijuana', 'Toluca', 'Tigres UANL'], tier: 4 },
   'Estados Unidos':    { clubs: ['Inter Miami', 'LA Galaxy', 'LAFC', 'Atlanta United', 'Seattle Sounders', 'Charlotte FC', 'Chicago Fire', 'FC Cincinnati', 'Columbus Crew', 'D.C. United', 'CF Montréal', 'Nashville SC', 'New England Revolution', 'New York City FC', 'New York Red Bulls', 'Orlando City', 'Philadelphia Union', 'Toronto FC', 'Austin FC', 'Colorado Rapids', 'FC Dallas', 'Houston Dynamo', 'Minnesota United', 'Portland Timbers', 'Real Salt Lake', 'San Diego FC', 'San Jose Earthquakes', 'Sporting Kansas City', 'St. Louis City SC', 'Vancouver Whitecaps'], tier: 4 },
   'Costa Rica':        { clubs: ['Saprissa', 'Alajuelense'], tier: 1 },
-  'Canadá':            { clubs: ['Toronto FC', 'Vancouver Whitecaps'], tier: 2 },
   /* Europa */
   'Portugal':          { clubs: ['Benfica', 'Porto', 'Sporting CP', 'Braga', 'Vitória de Guimarães', 'Alverca', 'Boavista', 'Famalicão'], tier: 5 },
-  'Espanha':           { clubs: ['Real Madrid', 'Barcelona', 'Atlético de Madrid', 'Sevilla', 'Real Sociedad', 'Villarreal'], tier: 6 },
-  'Itália':            { clubs: ['Juventus', 'Inter de Milão', 'AC Milan', 'Napoli', 'Roma', 'Atalanta'], tier: 6 },
-  'Alemanha':          { clubs: ['Bayern de Munique', 'Borussia Dortmund', 'RB Leipzig', 'Bayer Leverkusen', 'Eintracht Frankfurt'], tier: 6 },
-  'França':            { clubs: ['Paris Saint-Germain', 'Olympique de Marselha', 'Lyon', 'Monaco', 'Lille'], tier: 6 },
+  'Espanha':           { clubs: ['Real Madrid', 'Barcelona', 'Atlético de Madrid', 'Athletic Bilbao', 'Sevilla', 'Real Sociedad', 'Villarreal', 'Real Betis', 'Valencia', 'Celta de Vigo', 'Osasuna', 'Rayo Vallecano', 'Getafe', 'Alavés', 'Espanyol', 'Elche', 'Levante', 'Deportivo La Coruña', 'Racing de Santander', 'Málaga'], tier: 6 },
+  'Itália':            { clubs: ['Atalanta', 'Frosinone', 'Lecce', 'Roma', 'Bologna', 'Genoa', 'AC Milan', 'Sassuolo', 'Torino', 'Udinese', 'Venezia', 'Monza', 'Inter de Milão', 'Cagliari', 'Como', 'Juventus', 'Napoli', 'Parma', 'Lazio'], tier: 6 },
+  'Alemanha':          { clubs: ['Bayern de Munique', 'Borussia Dortmund', 'RB Leipzig', 'Bayer Leverkusen', 'Eintracht Frankfurt', 'VfB Stuttgart', 'Hamburger SV', 'Borussia Mönchengladbach', 'Werder Bremen', 'Mainz 05', 'FC Augsburg', 'Union Berlin', 'TSG Hoffenheim', 'FC Köln', 'SC Freiburg', 'Schalke 04', 'SV Elversberg', 'SC Paderborn'], tier: 6 },
+  'França':            { clubs: ['Angers SCO', 'AJ Auxerre', 'Stade Brestois', 'Le Havre AC', 'Le Mans', 'RC Lens', 'LOSC Lille', 'FC Lorient', 'Olympique Lyon', 'AS Monaco', 'OGC Nice', 'Olympique de Marselha', 'Paris FC', 'Paris Saint-Germain', 'Stade Rennais', 'RC Strasbourg', 'FC Toulouse', 'ES Troyes AC'], tier: 6 },
   'Inglaterra':        { clubs: ['Manchester City', 'Manchester United', 'Liverpool', 'Chelsea', 'Arsenal', 'Tottenham', 'Aston Villa', 'Bournemouth', 'Brentford', 'Brighton', 'Coventry City', 'Crystal Palace', 'Everton', 'Fulham', 'Hull City', 'Ipswich Town', 'Leeds United', 'Newcastle United', 'Nottingham Forest', 'Sunderland'], tier: 6 },
-  'Holanda':           { clubs: ['Ajax', 'PSV Eindhoven', 'Feyenoord', 'AZ Alkmaar'], tier: 5 },
+  'Holanda':           { clubs: ['Ajax', 'PSV Eindhoven', 'Feyenoord', 'AZ Alkmaar', 'FC Utrecht', 'FC Twente', 'NEC Nijmegen', 'Sparta Rotterdam', 'Fortuna Sittard', 'Heracles Almelo', 'PEC Zwolle', 'NAC Breda', 'FC Groningen', 'Telstar', 'Volendam', 'ADO Den Haag', 'Go Ahead Eagles', 'SC Cambuur'], tier: 5 },
   'Bélgica':           { clubs: ['Club Brugge', 'Anderlecht', 'Genk'], tier: 4 },
   'Escócia':           { clubs: ['Celtic', 'Rangers'], tier: 4 },
   'Turquia':           { clubs: ['Galatasaray', 'Fenerbahçe', 'Beşiktaş'], tier: 4 },
@@ -838,7 +837,7 @@ const TRANSFER_CLUBS = {
   'Suécia':            { clubs: ['Malmö FF', 'AIK'], tier: 2 },
   'Noruega':           { clubs: ['Rosenborg', 'Bodø/Glimt'], tier: 2 },
   /* Ásia e Oceania */
-  'Arábia Saudita':    { clubs: ['Al-Hilal', 'Al-Nassr', 'Al-Ittihad', 'Al-Ahli'], tier: 5 },
+  'Arábia Saudita':    { clubs: ['Abha Club', 'Al-Ahli', 'Al-Diraiyah', 'Al-Ettifaq', 'Al-Faisaly', 'Al-Fateh', 'Al-Fayha', 'Al-Hazem', 'Al-Hilal', 'Al-Ittihad', 'Al-Riyadh', 'Al-Qadsiah', 'Al-Nassr', 'Al-Kholood', 'Al-Khaleej', 'Neom SC', 'Al-Taawoun', 'Al-Shabab'], tier: 5 },
   'Catar':             { clubs: ['Al-Sadd', 'Al-Duhail'], tier: 3 },
   'Emirados Árabes':   { clubs: ['Al-Ain', 'Al-Wahda'], tier: 3 },
   'Japão':             { clubs: ['Kashima Antlers', 'Urawa Red Diamonds', 'Yokohama F. Marinos'], tier: 3 },
@@ -858,13 +857,22 @@ const TRANSFER_COUNTRIES = Object.keys(TRANSFER_CLUBS);
 
 const CLUB_TIERS = [
   null,
-  { tier: 1, label: 'Série D',               division: 'D', salaryBase: 3500,   prestige: 1 },
-  { tier: 2, label: 'Série C',               division: 'C', salaryBase: 9000,   prestige: 2 },
-  { tier: 3, label: 'Série B',               division: 'B', salaryBase: 24000,  prestige: 3 },
-  { tier: 4, label: 'Série A',               division: 'A', salaryBase: 55000,  prestige: 4 },
-  { tier: 5, label: 'Clube Europeu de Elite',division: 'INT', salaryBase: 140000, prestige: 5 },
-  { tier: 6, label: 'Superclube Mundial',    division: 'INT', salaryBase: 380000, prestige: 6 },
+  { tier: 1, label: 'Série D',               division: 'D', salaryBase: 3500,   prestige: 1, avgOverall: 34 },
+  { tier: 2, label: 'Série C',               division: 'C', salaryBase: 9000,   prestige: 2, avgOverall: 44 },
+  { tier: 3, label: 'Série B',               division: 'B', salaryBase: 24000,  prestige: 3, avgOverall: 54 },
+  { tier: 4, label: 'Série A',               division: 'A', salaryBase: 55000,  prestige: 4, avgOverall: 65 },
+  { tier: 5, label: 'Clube Europeu de Elite',division: 'INT', salaryBase: 140000, prestige: 5, avgOverall: 77 },
+  { tier: 6, label: 'Superclube Mundial',    division: 'INT', salaryBase: 380000, prestige: 6, avgOverall: 88 },
 ];
+
+function tierForTargetOverall(target) {
+  let best = 1, bestDiff = Infinity;
+  for (let t = 1; t <= 6; t++) {
+    const diff = Math.abs(CLUB_TIERS[t].avgOverall - target);
+    if (diff < bestDiff) { bestDiff = diff; best = t; }
+  }
+  return best;
+}
 
 /* Escudos reais fornecidos pelo usuário. Mapa nome-do-clube -> URL do escudo.
    Usado via crestImg(nome) em qualquer lugar que exibe um clube; sempre com
@@ -994,6 +1002,165 @@ const CLUB_CRESTS = {
   'Nottingham Forest': 'https://escudosfc.com.br/images/nott.png',
   'Sunderland': 'https://escudosfc.com.br/images/sunderland.png',
   'Tottenham': 'https://escudosfc.com.br/images/tottenham.png',
+  // Ligue 1
+  'Angers SCO': 'https://escudosfc.com.br/images/angers_fra.png',
+  'AJ Auxerre': 'https://escudosfc.com.br/images/auxerre.gif',
+  'Stade Brestois': 'https://escudosfc.com.br/images/brest_new.png',
+  'Le Havre AC': 'https://escudosfc.com.br/images/lehavre_fra.png',
+  'Le Mans': 'https://escudosfc.com.br/images/lemans.png',
+  'RC Lens': 'https://escudosfc.com.br/images/lens.png',
+  'LOSC Lille': 'https://escudosfc.com.br/images/lille_fra_new.png',
+  'FC Lorient': 'https://escudosfc.com.br/images/lorient_new.png',
+  'Olympique Lyon': 'https://escudosfc.com.br/images/lyon.png',
+  'AS Monaco': 'https://escudosfc.com.br/images/monaco.png',
+  'OGC Nice': 'https://escudosfc.com.br/images/nice.jpg',
+  'Olympique de Marselha': 'https://escudosfc.com.br/images/marseille.png',
+  'Paris FC': 'https://escudosfc.com.br/images/paris_fc_fra.png',
+  'Paris Saint-Germain': 'https://escudosfc.com.br/images/psg.png',
+  'Stade Rennais': 'https://escudosfc.com.br/images/rennes_new.png',
+  'RC Strasbourg': 'https://escudosfc.com.br/images/strasbourg.png',
+  'FC Toulouse': 'https://escudosfc.com.br/images/toulouse.png',
+  'ES Troyes AC': 'https://escudosfc.com.br/images/troyes_new.png',
+  // Bundesliga
+  'FC Augsburg': 'https://escudosfc.com.br/images/augsburg.png',
+  'Bayer Leverkusen': 'https://escudosfc.com.br/images/leverkusen.png',
+  'Bayern de Munique': 'https://escudosfc.com.br/images/bayern.png',
+  'Borussia Dortmund': 'https://escudosfc.com.br/images/borusia.png',
+  'Borussia Mönchengladbach': 'https://escudosfc.com.br/images/moench.gif',
+  'Eintracht Frankfurt': 'https://escudosfc.com.br/images/eintracht.png',
+  'SV Elversberg': 'https://escudosfc.com.br/images/elversberg_ger.png',
+  'SC Freiburg': 'https://escudosfc.com.br/images/freiburg.jpg',
+  'Hamburger SV': 'https://escudosfc.com.br/images/hamburg.png',
+  'TSG Hoffenheim': 'https://escudosfc.com.br/images/hoffenheim_ger.png',
+  'FC Köln': 'https://escudosfc.com.br/images/koln.png',
+  'Mainz 05': 'https://escudosfc.com.br/images/mainz.png',
+  'SC Paderborn': 'https://escudosfc.com.br/images/paderborn_ger.png',
+  'RB Leipzig': 'https://escudosfc.com.br/images/rb_leipzig_ale.png',
+  'Schalke 04': 'https://escudosfc.com.br/images/schalke.png',
+  'VfB Stuttgart': 'https://escudosfc.com.br/images/stuttgart.png',
+  'Union Berlin': 'https://escudosfc.com.br/images/unionberlin.png',
+  'Werder Bremen': 'https://escudosfc.com.br/images/werder.png',
+  // La Liga
+  'Alavés': 'https://escudosfc.com.br/images/alaves.png',
+  'Athletic Bilbao': 'https://escudosfc.com.br/images/athletic.png',
+  'Atlético de Madrid': 'https://escudosfc.com.br/images/atl.png',
+  'Barcelona': 'https://escudosfc.com.br/images/barca.png',
+  'Real Betis': 'https://escudosfc.com.br/images/betis.png',
+  'Celta de Vigo': 'https://escudosfc.com.br/images/celta.png',
+  'Deportivo La Coruña': 'https://escudosfc.com.br/images/la_coruna.png',
+  'Elche': 'https://escudosfc.com.br/images/elche.png',
+  'Espanyol': 'https://escudosfc.com.br/images/espanyol.png',
+  'Getafe': 'https://escudosfc.com.br/images/getafe.png',
+  'Levante': 'https://escudosfc.com.br/images/levante.png',
+  'Málaga': 'https://escudosfc.com.br/images/malaga.png',
+  'Osasuna': 'https://escudosfc.com.br/images/osasuna.png',
+  'Racing de Santander': 'https://escudosfc.com.br/images/racing.png',
+  'Rayo Vallecano': 'https://escudosfc.com.br/images/rayo.png',
+  'Real Madrid': 'https://escudosfc.com.br/images/real.png',
+  'Real Sociedad': 'https://escudosfc.com.br/images/soci.png',
+  'Sevilla': 'https://escudosfc.com.br/images/sevilla.png',
+  'Valencia': 'https://escudosfc.com.br/images/valencia.png',
+  'Villarreal': 'https://escudosfc.com.br/images/villareal.png',
+  // Liga Saudita
+  'Abha Club': 'https://escudosfc.com.br/images/abha_ara.png',
+  'Al-Ahli': 'https://escudosfc.com.br/images/ahli_ara.png',
+  'Al-Diraiyah': 'https://escudosfc.com.br/images/al_draih_ara.png',
+  'Al-Ettifaq': 'https://escudosfc.com.br/images/ettifaq_ara.png',
+  'Al-Faisaly': 'https://escudosfc.com.br/images/al_faysali_ara.png',
+  'Al-Fateh': 'https://escudosfc.com.br/images/alfateh_ara.png',
+  'Al-Fayha': 'https://escudosfc.com.br/images/al_feiha_ara.png',
+  'Al-Hazem': 'https://escudosfc.com.br/images/al_hazm_ara.png',
+  'Al-Hilal': 'https://escudosfc.com.br/images/alhilal_ara.png',
+  'Al-Ittihad': 'https://escudosfc.com.br/images/al_ittihad_ara.png',
+  'Al-Riyadh': 'https://escudosfc.com.br/images/al_riyadh.png',
+  'Al-Qadsiah': 'https://escudosfc.com.br/images/al_qadisiya_ara.png',
+  'Al-Nassr': 'https://escudosfc.com.br/images/alnassr.png',
+  'Al-Kholood': 'https://escudosfc.com.br/images/kholood_ara.png',
+  'Al-Khaleej': 'https://escudosfc.com.br/images/alkhalej_ara.jpg',
+  'Neom SC': 'https://escudosfc.com.br/images/neom_ara.png',
+  'Al-Taawoun': 'https://escudosfc.com.br/images/al_taawun_ara.png',
+  'Al-Shabab': 'https://escudosfc.com.br/images/alshabab_ara.png',
+  // Liga Mexicana
+  'América': 'https://escudosfc.com.br/images/amex.png',
+  'Atlante': 'https://escudosfc.com.br/images/atlante.png',
+  'Atlas': 'https://escudosfc.com.br/images/atlas.png',
+  'Atlético San Luis': 'https://escudosfc.com.br/images/san_luis_mex.png',
+  'Chivas de Guadalajara': 'https://escudosfc.com.br/images/chivas_mex.png',
+  'Cruz Azul': 'https://escudosfc.com.br/images/cruzazul.png',
+  'FC Juárez': 'https://escudosfc.com.br/images/juarez.png',
+  'León': 'https://escudosfc.com.br/images/leon_mex.png',
+  'Monterrey': 'https://escudosfc.com.br/images/monterrey.png',
+  'Necaxa': 'https://escudosfc.com.br/images/necaxa.png',
+  'Santos Laguna': 'https://escudosfc.com.br/images/santoslaguna2_mex.png',
+  'Universidad de Guadalajara': 'https://escudosfc.com.br/images/univ_guad_mex.png',
+  'Querétaro': 'https://escudosfc.com.br/images/gallosblancos.png',
+  'Puebla': 'https://escudosfc.com.br/images/puebla_mex.png',
+  'Pachuca': 'https://escudosfc.com.br/images/pachuca.png',
+  'Tijuana': 'https://escudosfc.com.br/images/tihuana_mex.png',
+  'Toluca': 'https://escudosfc.com.br/images/toluca.jpg',
+  'Tigres UANL': 'https://escudosfc.com.br/images/tigres.jpg',
+  // Liga Italiana
+  'Atalanta': 'https://escudosfc.com.br/images/atalanta.png',
+  'Frosinone': 'https://escudosfc.com.br/images/frosinone.png',
+  'Lecce': 'https://escudosfc.com.br/images/lecce.gif',
+  'Roma': 'https://escudosfc.com.br/images/ita_roma.png',
+  'Bologna': 'https://escudosfc.com.br/images/bologna.gif',
+  'Genoa': 'https://escudosfc.com.br/images/genoa.png',
+  'AC Milan': 'https://escudosfc.com.br/images/milan.png',
+  'Sassuolo': 'https://escudosfc.com.br/images/sassuolo_ita.gif',
+  'Torino': 'https://escudosfc.com.br/images/torino.png',
+  'Udinese': 'https://escudosfc.com.br/images/udinese.png',
+  'Venezia': 'https://escudosfc.com.br/images/venezia.png',
+  'Monza': 'https://escudosfc.com.br/images/monza.png',
+  'Inter de Milão': 'https://escudosfc.com.br/images/intermilao.png',
+  'Cagliari': 'https://escudosfc.com.br/images/cagliari.png',
+  'Como': 'https://escudosfc.com.br/images/como.png',
+  'Juventus': 'https://escudosfc.com.br/images/juventus_new.png',
+  'Napoli': 'https://escudosfc.com.br/images/napoli.png',
+  'Parma': 'https://escudosfc.com.br/images/parma.png',
+  'Lazio': 'https://escudosfc.com.br/images/lazio.png',
+  // Série C
+  'Amazonas FC': 'https://escudosfc.com.br/images/amazonas_fc_am.png',
+  'Anápolis': 'https://escudosfc.com.br/images/anapolis.png',
+  'Caxias': 'https://escudosfc.com.br/images/caxias.gif',
+  'Confiança': 'https://escudosfc.com.br/images/confianca_se.png',
+  'Guarani': 'https://escudosfc.com.br/images/guarani.gif',
+  'Inter de Limeira': 'https://escudosfc.com.br/images/intl.png',
+  'Grêmio Maringá': 'https://escudosfc.com.br/images/gremio_maringa.png',
+  'Paysandu': 'https://escudosfc.com.br/images/paysandu_pa.png',
+  'Santa Cruz': 'https://escudosfc.com.br/images/santacruz.png',
+  'Volta Redonda': 'https://escudosfc.com.br/images/volta.png',
+  'Itabaiana': 'https://escudosfc.com.br/images/itabaiana.gif',
+  'Ituano': 'https://escudosfc.com.br/images/ituano.png',
+  'Ferroviária': 'https://escudosfc.com.br/images/ferroviaria.png',
+  'Figueirense': 'https://escudosfc.com.br/images/figue.gif',
+  'Barra-SC': 'https://escudosfc.com.br/images/barra_sc.png',
+  'Botafogo-PB': 'https://escudosfc.com.br/images/botapb.png',
+  'Brusque': 'https://escudosfc.com.br/images/brusque.png',
+  'Floresta-CE': 'https://escudosfc.com.br/images/floresta_ce.png',
+  'Maranhão': 'https://escudosfc.com.br/images/maranhao.png',
+  'Ypiranga-RS': 'https://escudosfc.com.br/images/ypiranga_rs.png',
+  // Série D
+  'São Raimundo-RR': 'https://escudosfc.com.br/images/saoraimundo_rr.jpg',
+  'Porto Velho': 'https://escudosfc.com.br/images/porto_velho_ro.png',
+  'Brasiliense': 'https://escudosfc.com.br/images/brasiliense.png',
+  'Gama': 'https://escudosfc.com.br/images/gama.png',
+  'Capital-DF': 'https://escudosfc.com.br/images/capital_df.png',
+  'Águia-PA': 'https://escudosfc.com.br/images/aguia_pa.png',
+  'Iguatu': 'https://escudosfc.com.br/images/iguatu_ce.png',
+  'Altos': 'https://escudosfc.com.br/images/altos_pi.png',
+  'ABC': 'https://escudosfc.com.br/images/abc.jpg',
+  'América-RN': 'https://escudosfc.com.br/images/america.png',
+  'Treze': 'https://escudosfc.com.br/images/treze.jpg',
+  'Juazeirense': 'https://escudosfc.com.br/images/juazeirense_ba.png',
+  'Uberlândia': 'https://escudosfc.com.br/images/uberlandia.png',
+  'Tombense': 'https://escudosfc.com.br/images/tombense_mg.png',
+  'Portuguesa': 'https://escudosfc.com.br/images/portuguesa.png',
+  'Madureira': 'https://escudosfc.com.br/images/madureira.jpg',
+  'Nova Iguaçu': 'https://escudosfc.com.br/images/novaiguacu_rj.jpg',
+  'Joinville': 'https://escudosfc.com.br/images/jec.gif',
+  'GE Brasil': 'https://escudosfc.com.br/images/gebrasil.gif',
+  'São José-RS': 'https://escudosfc.com.br/images/saojose_rs.png',
 };
 
 function crestImg(name, size) {
@@ -1052,9 +1219,89 @@ function freshState() {
 
 let STATE = freshState();
 
+const StorageBackend = (function () {
+  let mode = null; // 'window' | 'local' | 'memory'
+  const memoryStore = {};
+  const LS_PREFIX = 'terrao_profissional_';
+
+  function hasWindowStorage() {
+    return typeof window !== 'undefined' && window.storage && typeof window.storage.get === 'function' && typeof window.storage.set === 'function';
+  }
+  function hasLocalStorage() {
+    try {
+      if (typeof localStorage === 'undefined') return false;
+      const t = '__terrao_test__';
+      localStorage.setItem(t, '1');
+      localStorage.removeItem(t);
+      return true;
+    } catch (e) { return false; }
+  }
+
+  async function detect() {
+    if (mode) return mode;
+    if (hasWindowStorage()) {
+      try {
+        await window.storage.set('__terrao_probe__', '1', false);
+        mode = 'window';
+        return mode;
+      } catch (e) { /* segue tentando o próximo nível */ }
+    }
+    if (hasLocalStorage()) { mode = 'local'; return mode; }
+    mode = 'memory';
+    return mode;
+  }
+
+  async function set(key, value) {
+    const m = await detect();
+    if (m === 'window') {
+      try { const r = await window.storage.set(key, value, false); if (r) return r; }
+      catch (e) { /* cai pro próximo nível abaixo */ }
+      mode = hasLocalStorage() ? 'local' : 'memory';
+      return set(key, value);
+    }
+    if (m === 'local') {
+      try { localStorage.setItem(LS_PREFIX + key, value); return { key, value }; }
+      catch (e) { mode = 'memory'; return set(key, value); }
+    }
+    memoryStore[key] = value;
+    return { key, value };
+  }
+
+  async function get(key) {
+    const m = await detect();
+    if (m === 'window') {
+      try { return await window.storage.get(key, false); }
+      catch (e) { mode = hasLocalStorage() ? 'local' : 'memory'; return get(key); }
+    }
+    if (m === 'local') {
+      try {
+        const v = localStorage.getItem(LS_PREFIX + key);
+        return v == null ? null : { key, value: v };
+      } catch (e) { mode = 'memory'; return get(key); }
+    }
+    return (key in memoryStore) ? { key, value: memoryStore[key] } : null;
+  }
+
+  async function del(key) {
+    const m = await detect();
+    if (m === 'window') {
+      try { return await window.storage.delete(key, false); }
+      catch (e) { mode = hasLocalStorage() ? 'local' : 'memory'; return del(key); }
+    }
+    if (m === 'local') {
+      try { localStorage.removeItem(LS_PREFIX + key); return { key, deleted: true }; }
+      catch (e) { mode = 'memory'; return del(key); }
+    }
+    delete memoryStore[key];
+    return { key, deleted: true };
+  }
+
+  return { set, get, delete: del, _debugMode: () => mode };
+})();
+
 async function persist() {
   try {
-    const res = await window.storage.set('save', JSON.stringify(STATE), false);
+    const res = await StorageBackend.set('save', JSON.stringify(STATE));
     if (!res) console.warn('Falha ao salvar (retorno vazio).');
   } catch (e) {
     console.warn('Falha ao salvar progresso:', e);
@@ -1073,7 +1320,7 @@ async function manualSave() {
 
 async function hasSave() {
   try {
-    const res = await window.storage.get('save', false);
+    const res = await StorageBackend.get('save');
     return !!(res && res.value);
   } catch (e) {
     return false;
@@ -1082,7 +1329,7 @@ async function hasSave() {
 
 async function loadSave() {
   try {
-    const res = await window.storage.get('save', false);
+    const res = await StorageBackend.get('save');
     if (res && res.value) {
       const parsed = JSON.parse(res.value);
       STATE = parsed;
@@ -1093,8 +1340,9 @@ async function loadSave() {
 }
 
 async function wipeSave() {
-  try { await window.storage.delete('save', false); } catch (e) { /* chave pode não existir */ }
+  try { await StorageBackend.delete('save'); } catch (e) { /* chave pode não existir */ }
 }
+
 
 /* =========================== 3. UTILITÁRIOS =========================== */
 
@@ -2559,19 +2807,23 @@ function continueNational() {
 
 function stepTransferCheck() {
   const p = STATE.player;
+  if (p.nextTransferEligibleSeason == null) p.nextTransferEligibleSeason = p.season + rand(2, 3);
+  if (p.season < p.nextTransferEligibleSeason) { runNextPostSeasonStep(); return; }
+
   const moraleFactor = clamp(0.45 + p.morale / 100, 0.45, 1.45);
-  const offerChance = clamp((0.12 + (repLevelIndex(p.reputation) - 1) * 0.09 + (p.contract.seasonsLeft <= 1 ? 0.2 : 0)) * moraleFactor, 0.03, 0.8);
+  const offerChance = clamp((0.4 + (repLevelIndex(p.reputation) - 1) * 0.05) * moraleFactor, 0.12, 0.92);
+  p.nextTransferEligibleSeason = p.season + rand(2, 3);
   if (!chance(offerChance)) { runNextPostSeasonStep(); return; }
 
   const agent = AGENTS[p.agent];
   const lvl = repLevelIndex(p.reputation);
-  const tierCap = p.morale < 40 ? clamp(lvl, 1, 5) : clamp(lvl + 1, 1, 6);
-  const tierFloor = clamp(p.club.tier, 1, 6);
+  const playerOverall = overallRating(p);
   const numOffers = clamp(2 + Math.floor(lvl / 3), 2, 4);
   const offers = [];
   for (let i = 0; i < numOffers; i++) {
-    const t = clamp(tierFloor + rand(0, 2), 1, tierCap);
-    offers.push(buildOfferCard(t, agent, chance(0.5) ? 'titular' : 'rotação'));
+    const target = playerOverall + randf(-3, 13);
+    const tier = tierForTargetOverall(target);
+    offers.push(buildOfferCard(tier, agent, chance(0.5) ? 'titular' : 'rotação'));
   }
 
   STATE.pendingOffers = {
@@ -3521,7 +3773,7 @@ function renderMenu() {
     <div class="menu-screen">
       <div class="menu-hero">
         <div class="menu-ball">⚽</div>
-        <h1 class="title-display">DO TERRÃO<br>AO PROFISSIONAL</h1>
+        <h1 class="title-display">CAMISA 10</h1>
         <p class="menu-tag">"Você começa com uma bola, um campo de terra e um sonho. O resto depende de você."</p>
       </div>
       <button class="btn btn-gold btn-lg btn-block" onclick="newGameStart()">Nova Carreira</button>
@@ -4208,8 +4460,8 @@ function renderPenalty() {
         <div class="keeper-figure" style="${keeperStyle}">
           <div class="keeper-arm keeper-arm-l"></div>
           <div class="keeper-arm keeper-arm-r"></div>
-          <div class="keeper-body"></div>
           <div class="keeper-head"></div>
+          <div class="keeper-body"></div>
         </div>
       </div>
       ${resultBanner}
