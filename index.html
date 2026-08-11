@@ -2349,7 +2349,7 @@ function fractionalGain(x) {
 
 function growWithDiminish(p, key, base, mult) {
   const cur = p.attrs[key];
-  const dim = clamp(1.35 - cur / 115, 0.15, 1.2);
+  const dim = clamp(1.2 - cur / 180, 0.45, 1.15);
   const gain = fractionalGain(base * mult * dim);
   if (gain > 0) growAttr(p, key, gain);
   return gain;
@@ -2365,7 +2365,7 @@ function applyAutomaticTraining(p) {
   const mult = clamp(1 + personalityFx('trainingMult') - p.fatigue / 260, 0.65, 1.9);
 
   const gains = {};
-  p.trainingFocus.forEach(k => { gains[k] = growWithDiminish(p, k, 0.66, mult); });
+  p.trainingFocus.forEach(k => { gains[k] = growWithDiminish(p, k, 0.74, mult); });
 
   ATTR_KEYS.forEach(k => {
     if (p.trainingFocus.includes(k)) return;
@@ -2473,8 +2473,9 @@ function buildProSeasonSummaryData() {
   const lines = [`Temporada encerrada — ${p.age} anos, ${p.club.name}.`, `${ss.matches} jogos · ${ss.goals} gols · ${ss.assists} assistências · nota média ${avgRating.toFixed(1)}.`];
 
   const finalTable = getSeasonTableWithPlayer(p);
+  let myRank = null;
   if (finalTable) {
-    const myRank = finalTable.findIndex(r => r.isMe) + 1;
+    myRank = finalTable.findIndex(r => r.isMe) + 1;
     const total = finalTable.length;
     const divLabel = CLUB_TIERS[playedTier].label;
     lines.push(`📊 Você terminou em ${myRank}º lugar na ${divLabel}.`);
@@ -2492,8 +2493,8 @@ function buildProSeasonSummaryData() {
     p.seasonTable = null;
   }
 
-  const titleChance = clamp(0.14 + playedTier * 0.05 + (avgRating - 6) * 0.06, 0.03, 0.55);
-  if (chance(titleChance)) {
+  const wonTitle = finalTable ? (myRank === 1) : chance(clamp(0.14 + playedTier * 0.05 + (avgRating - 6) * 0.06, 0.03, 0.55));
+  if (wonTitle) {
     const pool = playedTier >= 5 ? TITLE_POOL_ELITE.concat(TITLE_POOL_DOMESTIC) : TITLE_POOL_DOMESTIC;
     const t = pick(pool);
     p.trophies.push({ name: t, season: p.season - 1, age: p.age, club: p.club.name });
@@ -2937,9 +2938,12 @@ function stepTransferCheck() {
   if (p.season < p.nextTransferEligibleSeason) { runNextPostSeasonStep(); return; }
 
   const moraleFactor = clamp(0.45 + p.morale / 100, 0.45, 1.45);
-  const offerChance = clamp((0.4 + (repLevelIndex(p.reputation) - 1) * 0.05) * moraleFactor, 0.12, 0.92);
+  if (p.transferMissStreak == null) p.transferMissStreak = 0;
+  const pityBoost = p.transferMissStreak * 0.18;
+  const offerChance = clamp((0.4 + (repLevelIndex(p.reputation) - 1) * 0.05) * moraleFactor + pityBoost, 0.25, 0.97);
   p.nextTransferEligibleSeason = p.season + nextTransferGap(p);
-  if (!chance(offerChance)) { runNextPostSeasonStep(); return; }
+  if (!chance(offerChance)) { p.transferMissStreak++; runNextPostSeasonStep(); return; }
+  p.transferMissStreak = 0;
 
   const agent = AGENTS[p.agent];
   const lvl = repLevelIndex(p.reputation);
@@ -4346,10 +4350,9 @@ function ensureSeasonTable(p) {
   if (!p.club || p.club.country !== 'Brasil' || p.club.tier > 4) { p.seasonTable = null; return; }
   if (p.seasonTable && p.seasonTable.tier === p.club.tier && p.seasonTable.season === p.season) return;
   const pool = (BR_CLUBS_BY_TIER[p.club.tier] || []).filter(n => n !== p.club.name);
-  const rivals = pickN(pool, Math.min(9, pool.length));
   p.seasonTable = {
     tier: p.club.tier, season: p.season,
-    rivals: rivals.map(name => ({ name, pts: 0, played: 0 })),
+    rivals: pool.map(name => ({ name, pts: 0, played: 0 })),
   };
 }
 
@@ -4385,7 +4388,7 @@ function generateStandingsTable(p) {
   const country = p.club.country;
   const pool = (TRANSFER_CLUBS[country] && TRANSFER_CLUBS[country].clubs) || [];
   const tierClubs = pool.filter(n => n !== p.club.name);
-  const rivals = pickN(tierClubs, Math.min(9, tierClubs.length));
+  const rivals = tierClubs;
   const ss = p.seasonStats;
   const myPts = (ss.wins || 0) * 3 + (ss.draws || 0);
   const myPlayed = ss.matches || 0;
