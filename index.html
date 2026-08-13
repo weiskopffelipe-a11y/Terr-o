@@ -855,6 +855,24 @@ const TRANSFER_CLUBS = {
 };
 const TRANSFER_COUNTRIES = Object.keys(TRANSFER_CLUBS);
 
+function computeSeasonLength(p) {
+  if (!p.club) return CONFIG.TURNS_PER_SEASON;
+  let pool;
+  if (p.club.country === 'Brasil') pool = BR_CLUBS_BY_TIER[p.club.tier] || [];
+  else pool = (TRANSFER_CLUBS[p.club.country] && TRANSFER_CLUBS[p.club.country].clubs) || [];
+  const rivalCount = pool.filter(n => n !== p.club.name).length;
+  return rivalCount > 0 ? rivalCount * 2 : CONFIG.TURNS_PER_SEASON;
+}
+
+function ensureSeasonLength(p) {
+  const key = p.club ? `${p.club.country}|${p.club.tier}` : '';
+  if (p.seasonLengthKey !== key || p.seasonLength == null) {
+    p.seasonLength = computeSeasonLength(p);
+    p.seasonLengthKey = key;
+  }
+  return p.seasonLength;
+}
+
 const CLUB_TIERS = [
   null,
   { tier: 1, label: 'Série D',               division: 'D', salaryBase: 3500,   prestige: 1, avgOverall: 34 },
@@ -1926,6 +1944,7 @@ function finishMatch() {
     if (pm.result === 'vitoria') p.seasonStats.wins = (p.seasonStats.wins || 0) + 1;
     else if (pm.result === 'empate') p.seasonStats.draws = (p.seasonStats.draws || 0) + 1;
     else p.seasonStats.losses = (p.seasonStats.losses || 0) + 1;
+    if (pm.onResolve === 'pro') recordMyClubResult(p, pm.result);
   }
   p.ratingHistory.push({ week: p.week, season: p.season, opponent: pm.opponentName, result: pm.result, myGoals: pm.myGoalsTeam, oppGoals: pm.oppGoalsTeam, rating: pm.rating, playerGoals: pm.playerGoals, playerAssists: pm.playerAssists });
   if (p.ratingHistory.length > 200) p.ratingHistory.shift();
@@ -2273,7 +2292,7 @@ function buildOfferCard(tier, agent, roleHint) {
     compat: computeCompatibility(p, t.tier, club),
     quote: pick(OFFER_QUOTES),
     years, salary, signingBonus: Math.round(salary * randf(1.5, 4) / 100) * 100,
-    role, squadLevel: clamp(getClubOverall(club, t.tier) + rand(-3, 3), 20, 99),
+    role, squadLevel: getClubOverall(club, t.tier),
     ambition: CLUB_AMBITION_BY_TIER[t.tier] || 'Consolidação',
     objectives: pickN(OFFER_OBJECTIVES_POOL, 3),
   };
@@ -2389,6 +2408,7 @@ function proWeekAction(resting) {
     trainResult = applyAutomaticTraining(p);
   }
   p.week++;
+  if (p.turnInSeason == null) p.turnInSeason = p.week; else p.turnInSeason++;
   p.money += p.contract.salary;
   if (p.flags.passiveIncome) p.money += p.flags.passiveIncome;
   applyBillsAndUpkeep(p);
@@ -2403,14 +2423,24 @@ function proWeekAction(resting) {
   advanceRivalResults(p);
 
   p.squadStatus = computeSquadStatus(p);
-  const seasonTurn = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
-  const isSeasonFinal = seasonTurn === CONFIG.TURNS_PER_SEASON;
+  const seasonLen = ensureSeasonLength(p);
+  const seasonTurn = p.turnInSeason;
+  const isSeasonFinal = seasonTurn >= seasonLen;
 
   if (p.squadStatus === 'fora') {
     addLog('📋 Moral baixa pesou: você nem foi relacionado para este jogo.');
     advanceFriendsRandom();
+    const foraOpp = pickOpponentClub(p);
+    const foraClubBase = getClubOverall(p.club.name, p.club.tier);
+    const foraOppOverall = getClubOverall(foraOpp, p.club.tier) + rand(-4, 4);
+    const foraDiff = clamp((foraClubBase - foraOppOverall) / 24, -1.6, 1.6);
+    const foraMy = poissony(clamp(1.15 + foraDiff, 0.2, 2.5));
+    const foraOppGoals = poissony(clamp(1.15 - foraDiff, 0.2, 2.5));
+    const foraResult = foraMy > foraOppGoals ? 'vitoria' : foraMy === foraOppGoals ? 'empate' : 'derrota';
+    recordMyClubResult(p, foraResult);
+    addLog(`📋 O time entrou em campo sem você: ${{ vitoria: '✅ Vitória', empate: '➖ Empate', derrota: '❌ Derrota' }[foraResult]} por ${foraMy} × ${foraOppGoals} contra o ${foraOpp}.`);
     if (p.flags.babyReady) { triggerChildBirth(); persist(); render(); return; }
-    if (isSeasonFinal) { p.season++; p.age++; applyAgingEffects(); if (!checkAndQueueBirthday18(p, 'finishProSeason')) finishProSeason(); }
+    if (isSeasonFinal) { p.season++; p.turnInSeason = 0; p.age++; applyAgingEffects(); if (!checkAndQueueBirthday18(p, 'finishProSeason')) finishProSeason(); }
     else { STATE.screen = 'hub'; }
     persist(); render();
     return;
@@ -2442,12 +2472,14 @@ function applyAgingEffects() {
 function continuePro() {
   const p = STATE.player;
   const pm = STATE.pendingMatch;
-  const seasonTurn = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
-  const isSeasonEnd = seasonTurn === CONFIG.TURNS_PER_SEASON;
+  const seasonLen = ensureSeasonLength(p);
+  const seasonTurn = p.turnInSeason;
+  const isSeasonEnd = seasonTurn >= seasonLen;
   STATE.pendingMatch = null;
 
   if (isSeasonEnd) {
     p.season++;
+    p.turnInSeason = 0;
     p.age++;
     applyAgingEffects();
     if (!checkAndQueueBirthday18(p, 'finishProSeason')) finishProSeason();
@@ -2705,6 +2737,7 @@ function injuryWeekTick() {
   if (p.phase === 'pro' && p.contract) {
     p.money += p.contract.salary;
     p.week++;
+    if (p.turnInSeason == null) p.turnInSeason = p.week; else p.turnInSeason++;
     advanceFriendsRandom();
     advanceRivalResults(p);
     const opponentName = pickOpponentClub(p);
@@ -2718,12 +2751,13 @@ function injuryWeekTick() {
     if (result === 'vitoria') p.seasonStats.wins++;
     else if (result === 'empate') p.seasonStats.draws++;
     else p.seasonStats.losses++;
+    recordMyClubResult(p, result);
     const resultLabel = { vitoria: '✅ Vitória', empate: '➖ Empate', derrota: '❌ Derrota' }[result];
     addLog(`🚑 Você não jogou — estava lesionado (${p.injury.name}). O time entrou em campo sem você: ${resultLabel} por ${myGoals} × ${oppGoals} contra o ${opponentName}.`);
 
-    const seasonTurn = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
-    if (seasonTurn === CONFIG.TURNS_PER_SEASON) {
-      p.season++; p.age++; applyAgingEffects();
+    const seasonLen = ensureSeasonLength(p);
+    if (p.turnInSeason >= seasonLen) {
+      p.season++; p.turnInSeason = 0; p.age++; applyAgingEffects();
       if (p.injury.turnsLeft <= 0) { addLog('✅ Recuperado! De volta aos gramados.'); p.injury = null; }
       else addLog(`🩹 Fisioterapia continua — faltam ${p.injury.turnsLeft} semana(s).`);
       if (!checkAndQueueBirthday18(p, 'finishProSeason')) finishProSeason();
@@ -2847,7 +2881,7 @@ function afterSummaryContinue() {
   STATE.pendingSummary = null;
   if (!s) { STATE.screen = 'hub'; persist(); render(); return; }
   if (s.kind === 'base-end') {
-    if (s.proceed) { p.phase = 'pro'; p.week = 1; p.rival = null; presentInitialOffers(); } else { STATE.screen = 'hub'; persist(); render(); }
+    if (s.proceed) { p.phase = 'pro'; p.week = 1; p.turnInSeason = 1; p.rival = null; presentInitialOffers(); } else { STATE.screen = 'hub'; persist(); render(); }
     return;
   }
   if (s.kind === 'pro-end') {
@@ -2989,15 +3023,26 @@ function stepContractCheck() {
   if (p.contract.seasonsLeft > 0) { runNextPostSeasonStep(); return; }
 
   const newSalary = Math.round(p.contract.salary * clamp(1 + p.reputation / 700, 1.05, 2) / 100) * 100;
-  STATE.pendingEvent = {
+  const agent = AGENTS[p.agent];
+  const lvl = repLevelIndex(p.reputation);
+  const playerOverall = overallRating(p);
+  const numOffers = clamp(2 + Math.floor(lvl / 3), 2, 4);
+  const offers = [];
+  for (let i = 0; i < numOffers; i++) {
+    const target = playerOverall + randf(-3, 13);
+    const tier = tierForTargetOverall(target);
+    offers.push(buildOfferCard(tier, agent, chance(0.5) ? 'titular' : 'rotação'));
+  }
+
+  STATE.pendingOffers = {
     title: 'Fim de Contrato', stamp: 'CONTRATO',
-    body: [`Seu vínculo com o ${p.club.name} chega ao fim.`],
-    choices: [
-      { label: `Renovar por ${fmtMoney(newSalary)}/mês`, sub: '3 anos', onclick: `renewContract(${newSalary},3)` },
-      { label: 'Trocar de empresário e negociar', onclick: 'promptAgentSwitch()' },
-    ],
+    intro: `Seu vínculo com o ${p.club.name} chega ao fim. Além de renovar, você recebeu propostas de outros clubes de olho na sua situação.`,
+    offers, allowStay: true, currentClub: p.club.name,
+    stayLabel: `✍️ Renovar com ${escapeHtml(p.club.name)} — ${fmtMoney(newSalary)}/mês`,
+    stayAction: `renewContract(${newSalary},3)`,
+    onAcceptPrefix: 'acceptTransferOfferByIndex',
   };
-  STATE.screen = 'event';
+  STATE.screen = 'offers';
   persist();
   render();
 }
@@ -4023,9 +4068,10 @@ const SQUAD_STATUS_LABEL = { titular: 'Titular', reserva: 'Reserva', fora: 'Fora
 function renderPhaseHeader() {
   const p = STATE.player;
   if (!p.club) return '';
-  const t = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
+  const seasonLen = ensureSeasonLength(p);
+  const t = p.turnInSeason || 1;
   const status = p.squadStatus || 'titular';
-  return `<div class="phase-head"><h2>${escapeHtml(p.club.name)}</h2><p>Temporada ${p.season} · Rodada ${t} de ${CONFIG.TURNS_PER_SEASON} · ${p.club.country} <span class="squad-badge status-${status}">${SQUAD_STATUS_LABEL[status]}</span></p></div>`;
+  return `<div class="phase-head"><h2>${escapeHtml(p.club.name)}</h2><p>Temporada ${p.season} · Rodada ${t} de ${seasonLen} · ${p.club.country} <span class="squad-badge status-${status}">${SQUAD_STATUS_LABEL[status]}</span></p></div>`;
 }
 
 function renderNewsFeed() {
@@ -4122,7 +4168,8 @@ function renderHub() {
 
   if (!p.nextOpponentPreview) p.nextOpponentPreview = pickOpponentClub(p);
   const nextOpp = p.nextOpponentPreview;
-  const t = ((p.week - 1) % CONFIG.TURNS_PER_SEASON) + 1;
+  const seasonLen = ensureSeasonLength(p);
+  const t = p.turnInSeason || 1;
   const status = p.squadStatus || 'titular';
 
   const shortcutBtns = getHubShortcuts(p).map(s => `<button class="shortcut-btn" onclick="${s.fn}"><span class="shortcut-icon">${s.icon}</span><span class="shortcut-label">${s.label}</span></button>`).join('');
@@ -4138,7 +4185,7 @@ function renderHub() {
         ${crestImg(nextOpp, 42)}
       </div>
       <div class="next-match-names"><span>${escapeHtml(p.club.name)}</span><span>${escapeHtml(nextOpp)}</span></div>
-      <div class="next-match-meta">Rodada ${t} de ${CONFIG.TURNS_PER_SEASON} · Temporada ${p.season} · <span class="squad-badge status-${status}">${SQUAD_STATUS_LABEL[status]}</span></div>
+      <div class="next-match-meta">Rodada ${t} de ${seasonLen} · Temporada ${p.season} · <span class="squad-badge status-${status}">${SQUAD_STATUS_LABEL[status]}</span></div>
       <button class="btn btn-gold btn-block" onclick="proWeekAction()">▶️ Avançar até o jogo</button>
       <button class="btn btn-outline btn-block" style="margin-top:8px" onclick="confirmRestPrompt()">😴 Descansar</button>
     </div>
@@ -4352,6 +4399,7 @@ function ensureSeasonTable(p) {
   const pool = (BR_CLUBS_BY_TIER[p.club.tier] || []).filter(n => n !== p.club.name);
   p.seasonTable = {
     tier: p.club.tier, season: p.season,
+    myPts: 0, myPlayed: 0,
     rivals: pool.map(name => ({ name, pts: 0, played: 0 })),
   };
 }
@@ -4360,23 +4408,28 @@ function advanceRivalResults(p) {
   ensureSeasonTable(p);
   if (!p.seasonTable) return;
   p.seasonTable.rivals.forEach(r => {
-    if (chance(0.82)) {
+    if (chance(0.92)) {
       const roll = Math.random();
-      if (roll < 0.38) r.pts += 3;
-      else if (roll < 0.65) r.pts += 1;
+      if (roll < 0.4) r.pts += 3;
+      else if (roll < 0.7) r.pts += 1;
       r.played++;
     }
   });
 }
 
+function recordMyClubResult(p, result) {
+  ensureSeasonTable(p);
+  if (!p.seasonTable) return;
+  p.seasonTable.myPlayed++;
+  if (result === 'vitoria') p.seasonTable.myPts += 3;
+  else if (result === 'empate') p.seasonTable.myPts += 1;
+}
+
 function getSeasonTableWithPlayer(p) {
   ensureSeasonTable(p);
   if (!p.seasonTable) return null;
-  const ss = p.seasonStats;
-  const myPts = (ss.wins || 0) * 3 + (ss.draws || 0);
-  const myPlayed = ss.matches || 0;
   const rows = p.seasonTable.rivals.map(r => ({ name: r.name, pts: r.pts, played: r.played, isMe: false }));
-  rows.push({ name: p.club.name, pts: myPts, played: myPlayed, isMe: true });
+  rows.push({ name: p.club.name, pts: p.seasonTable.myPts, played: p.seasonTable.myPlayed, isMe: true });
   rows.sort((a, b) => b.pts - a.pts || b.played - a.played);
   return rows;
 }
@@ -4548,7 +4601,7 @@ function renderOffers() {
       <button class="btn btn-gold btn-block" onclick="${po.onAcceptPrefix}(${i})">Aceitar proposta →</button>
     </div>
   `).join('');
-  const stayBtn = po.allowStay ? `<button class="btn btn-outline btn-block offers-stay" onclick="declineTransferOffer()">✕ Permanecer no ${escapeHtml(po.currentClub)}</button>` : '';
+  const stayBtn = po.allowStay ? `<button class="btn btn-outline btn-block offers-stay" onclick="${po.stayAction || 'declineTransferOffer()'}">${po.stayLabel || `✕ Permanecer no ${escapeHtml(po.currentClub)}`}</button>` : '';
   return renderShell(`
     <div class="offers-header"><h2>${escapeHtml(po.title)}</h2><p>${escapeHtml(po.intro)}</p></div>
     ${cards}
